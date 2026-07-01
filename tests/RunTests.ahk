@@ -1,9 +1,9 @@
-#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.1-alpha.30+
 
-#Include ./YUnit/YUnit.ahk
-#Include ./YUnit/ResultCounter.ahk
-#Include ./YUnit/JUnit.ahk
-#Include ./YUnit/Stdout.ahk
+#Import "./YUnit/YUnit.ahk" { Yunit }
+#Import "./YUnit/ResultCounter.ahk" { YunitResultCounter }
+#Import "./YUnit/JUnit.ahk" { YUnitJUnit }
+#Import "./YUnit/Stdout.ahk" { YUnitStdOut }
 
 YUnit.Use(YunitResultCounter, YUnitJUnit, YUnitStdOut).Test(
 	; Add test classes here

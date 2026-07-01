@@ -16,17 +16,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        exe: ['AutoHotkey64.exe', 'AutoHotkey32.exe']
-        version: ['latest', '2.1-latest']
+        exe: ['AutoHotkey64.exe']
+        version: ['2.1-alpha.30', '2.1-latest']
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Install AutoHotkey V2
-        uses: holy-tao/install-autohotkey@v2.0.0
+        uses: holy-tao/install-autohotkey@v2.1.0
         with:
           version: ${{ matrix.version }}
 
@@ -42,6 +42,10 @@ jobs:
           report_paths: tests/junit.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Test Results (${{ matrix.exe }} - ${{ matrix.version }})
+          fail_on_failure: true
+          fail_on_parse_error: true
+          require_tests: true
+
 
   all-tests-passed:
     name: All Tests Passed
