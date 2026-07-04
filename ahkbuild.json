@@ -1,0 +1,40 @@
+{
+  "$schema": "https://holy-tao.github.io/ahkbuild/schema/ahkbuild.schema.json",
+  "entry": "main.ahk",
+  "interpreter": {
+    "version": "2.1-alpha.30",
+    "bitness": 64
+  },
+  "exe": {
+    "name": "ahkbindgen",
+    "description": "C binding generator for AHK v2.1",
+    "subsystem": "console",
+    "version": "1.0.0.0",
+    "company": "Tao Beloney",
+    "copyright": "Copyright 2026 Tao Beloney"
+  },
+  "dependencies": {
+    "libclang.ahk": {
+      "git": "git@github.com:holy-tao/libclang.ahk.git",
+      "alias": "libclang"
+    },
+    "log4ahk": {
+      "git": "git@github.com:holy-tao/log4ahk.git",
+      "branch": "feat/2.1"
+    },
+    "YAML64.ahk": {
+      "release": "holy-tao/YAML",
+      "tag": "v0.5.0",
+      "asset": "YAML64.ahk",
+      "sha256": "5b32809027bfedd68a18a2de5e44778c2fa4660792e3df92438137e17208709e",
+      "alias": "YAML"
+    },
+    "AhkExtensions": {
+      "git": "git@github.com:holy-tao/AhkExtensions.git",
+      "alias": "extensions"
+    },
+    "Utils": {
+      "git": "git@github.com:holy-tao/ahk-utils.git"
+    }
+  }
+}

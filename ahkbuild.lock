@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "package": [
+    {
+      "name": "AhkExtensions",
+      "source": "git+git@github.com:holy-tao/AhkExtensions.git",
+      "resolved": "4ccbb2a9ae4603bc7513d590e24051d0133eca45",
+      "checksum": "sha256:3beb7e0007352c678f7d4b3173deb780421a323e3ac7e0f2ecfadbf2e6bebd3e"
+    },
+    {
+      "name": "Utils",
+      "source": "git+git@github.com:holy-tao/ahk-utils.git",
+      "resolved": "6ed47a723f0a34f64c362fafcdd205779ec785d2",
+      "checksum": "sha256:80b1e8cf3d0a0290f932359b1376163ef35c921b0e3624bfc77180b4a9ecd56d"
+    },
+    {
+      "name": "YAML64.ahk",
+      "source": "release+holy-tao/YAML@v0.5.0/YAML64.ahk?sha256=5b32809027bfedd68a18a2de5e44778c2fa4660792e3df92438137e17208709e",
+      "resolved": "https://github.com/holy-tao/YAML/releases/download/v0.5.0/YAML64.ahk",
+      "checksum": "sha256:62c745988f250e4fcb3d81a4eaead74480255f6a03e0d4a69f62f55173c9b258"
+    },
+    {
+      "name": "libclang.ahk",
+      "source": "git+git@github.com:holy-tao/libclang.ahk.git",
+      "resolved": "09a028469a73ce75adf6d505c8427797e244cb9f",
+      "checksum": "sha256:96d1968a5d06851d1c2ef62db3c5be196fb926bf71d589edbe1592333e323331"
+    },
+    {
+      "name": "log4ahk",
+      "source": "git+git@github.com:holy-tao/log4ahk.git?branch=feat/2.1",
+      "resolved": "9c589af78d2c84bd48e2aef3dec2e1e8e24953ee",
+      "checksum": "sha256:e0509210eb8bb2e9ed1063f6df6f27e8c3777a6e600af2215f5f68a20cbf1945"
+    }
+  ]
+}
