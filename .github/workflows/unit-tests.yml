@@ -13,11 +13,6 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
-    strategy:
-      fail-fast: false
-      matrix:
-        exe: ['AutoHotkey64.exe']
-        version: ['2.1-alpha.30', '2.1-latest']
 
     steps:
       - name: Checkout Repository
@@ -25,15 +20,25 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install AutoHotkey V2
-        uses: holy-tao/install-autohotkey@v2.1.0
+      - name: Checkout Ahkbuild
+        uses: actions/checkout@v7
         with:
-          version: ${{ matrix.version }}
+          repository: holy-tao/ahkbuild
+          path: ahkbuild
 
-      - name: Run Unit Tests
-        working-directory: tests
-        shell: powershell
-        run: ${{ matrix.exe }} /ErrorStdOut RunTests.ahk
+      - run: cargo install --path crates/cli
+        working-directory: ahkbuild
+
+      - name: Restore dependencies
+        shell: pwsh
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          if ($env:RUNNER_DEBUG -eq '1') {
+              ahkbuild package restore -vvv --locked
+          } else {
+              ahkbuild package restore --locked
+          }
+      - run: ahkbuild run -v tests/RunTests.ahk
 
       - name: Publish Test Results
         if: always()
