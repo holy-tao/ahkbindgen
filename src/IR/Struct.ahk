@@ -2,6 +2,7 @@
 
 #Import "Utils\Record" { Record }
 #Import "Type" { Type, IsType }
+#Import "Common" { ArrayOf }
 
 /**
  * A struct definition
@@ -23,7 +24,7 @@ export class Struct extends Record {
      * The struct's fields
      * @type {Array<Field>}
      */
-    fields := [ArrayOf.Bind(Field), []]
+    fields := [ArrayOf.Bind(StructField), []]
 }
 
 /**
@@ -46,13 +47,13 @@ export class Union extends Record {
      * The union's fields
      * @type {Array<Field>}
      */
-    fields := [ArrayOf.Bind(Field), []]
+    fields := [ArrayOf.Bind(StructField), []]
 }
 
 /**
  * A struct or union field (c++ classes are not supported)
  */
-export class Field extends Record {
+export class StructField extends Record {
     /**
      * The field's type
      * @type {Type}
@@ -73,25 +74,6 @@ export class Field extends Record {
 }
 
 ; Private
-
-ArrayOf(validator, arr) {
-    ; TODO should this copy the input?
-    loop arr.Length {
-        try {
-            ; Pass through elements that already satisfy the validator class - Record's copy-construct is unreliable,
-            ; and re-validating an already-built element (e.g. a Field) would otherwise trip it.
-            item := arr[A_Index]
-            arr[A_Index] := (validator is Class && item is validator) ? item : validator(item)
-        }
-        catch Error as err {
-            ; Attach context
-            err.Message .= "`nCaught by ArrayOf at index " A_Index
-            throw err
-        }
-    }
-
-    return arr
-}
 
 NonNegativeInteger(i) {
     if (i := Integer(i)) < 0

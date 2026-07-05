@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2.1-alpha.30
 
-#Import "IR\Struct" { Struct, Field }
+#Import "IR\Struct" { Struct, StructField }
+#Import "IR\Enum" { Enum, EnumField }
 #Import "IR\Type" { Type, PrimitiveType, PointerType, ArrayType, OpaqueType, NamedType, TypedefType }
 #Import "log4ahk\Log" { Log, Level as LogLevel }
 #Import "libclang" {
@@ -44,6 +45,8 @@ Visit(registry, cursor, parent) {
     switch cursor.kind {
         case CursorKind.StructDecl:
             ExtractStruct(registry, cursor)
+        case CursorKind.EnumDecl:
+            ExtractEnum(registry, cursor)
         default:
             Log.Trace(Format("Unhanlded cursor kind '{1}': {2} ", cursor.kind, cursor.DisplayName))
     }
@@ -60,12 +63,12 @@ Visit(registry, cursor, parent) {
  */
 ExtractStruct(registry, cursor) {
     cursorType := cursor.Type   ; Save some DllCalls
-    structType := Struct({
+    extracted := Struct({
         usr: cursor.USR,
         name: cursor.Spelling,
         fields: cursor.Children()
             .Filter((c) => c.kind == CursorKind.FieldDecl)
-            .Map((c) => Field({
+            .Map((c) => StructField({
                 name: c.Spelling,
                 type: ExtractType(c.Type),
                 ; libclang reports field offsets in bits
@@ -73,8 +76,32 @@ ExtractStruct(registry, cursor) {
             }))
     })
 
-    Log.Trace("Extracted " String(structType))
-    registry[structType.usr] := structType
+    Log.Debug("Extracted " String(extracted))
+    registry[extracted.usr] := extracted
+}
+
+/**
+ * Extract an enum into the registry
+ * 
+ * @param {Map<String, Type>} registry type registry, keyed by USR
+ * @param {CXCursor} cursor Cursor, type assumed to be EnumDecl
+ * @returns {void} nothing 
+ */
+ExtractEnum(registry, cursor) {
+    extracted := Enum({
+        usr: cursor.USR,
+        name: cursor.Spelling,
+        underlying: ExtractType(cursor.EnumIntegerType),
+        fields: cursor.Children()
+            .Filter((c) => c.kind == CursorKind.EnumConstantDecl)
+            .Map((c) => EnumField({
+                name: c.Spelling,
+                value: c.EnumConstantValue
+            }))
+    })
+
+    Log.Debug("Extracted " String(extracted))
+    registry[extracted.usr] := extracted
 }
 
 /**
