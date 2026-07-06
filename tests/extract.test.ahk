@@ -1,6 +1,6 @@
 #Requires AutoHotkey v2.1-alpha.30
 
-#Import "../src/extract" { ExtractType, ExtractStruct, ExtractEnum }
+#Import "../src/extract" { ExtractType, ExtractStruct, ExtractUnion, ExtractEnum }
 #Import "../src/IR" as IR
 
 #Import "YUnit\Yunit" { Yunit }
@@ -104,6 +104,31 @@ _AssertStructExtraction(testName, code, expected, structName?) {
     expected := expected.With({usr: extracted.usr})
 
     Assert.IsType(extracted, IR.Struct.Struct)
+    YUnit.Assert(extracted.Equals(expected), Format("Expected {1} to equal {2}",
+        String(extracted), String(expected)))
+}
+
+/**
+ * Extract a union declaration and verify its fields, types, and offsets.
+ *
+ * @param {String} testName the unit test method - pass A_ThisFunc
+ * @param {String} code code to parse
+ * @param {IR.Struct.Union} expected expected shape of the extracted struct
+ * @param {String | unset} structName spelling of the struct to assert on, if `code` declares several
+ */
+_AssertUnionExtraction(testName, code, expected, structName?) {
+    tu := _Parse(code, testName)
+    cursor := tu.Cursor.Children()
+        .Filter((c) => c.kind == CursorKind.UnionDecl)
+        .Single((c) => !IsSet(structName) || c.Spelling == structName)
+
+    ExtractUnion(registry := Map(), cursor)
+    extracted := registry[cursor.USR]
+
+    ; Required but not generally known ahead of time, don't need to assert on it
+    expected := expected.With({usr: extracted.usr})
+
+    Assert.IsType(extracted, IR.Struct.Union)
     YUnit.Assert(extracted.Equals(expected), Format("Expected {1} to equal {2}",
         String(extracted), String(expected)))
 }
@@ -311,6 +336,49 @@ class ExtractTests {
             })
 
             _AssertStructExtraction(A_ThisFunc, code, expected, "Outer")
+        }
+
+        ; Unions use the exact same machinery as structs, so no need to stress test them
+        ; specifically
+        Unions_AreExtracted() {
+            code := "
+            (
+                typedef union IntOrDouble {
+                    long long intVal;
+                    double doubleVal;
+                } IntOrDouble;
+            )"
+
+            expected := IR.Struct.Union({
+                usr: "unknown",
+                name: "IntOrDouble",
+                fields: [
+                    IR.Struct.StructField({
+                        name: "intVal",
+                        offset: 0,
+                        type: IR.PrimitiveType({
+                            alignment: 8,
+                            canonical: "long long",
+                            size: 8,
+                            specifier: "Int64",
+                            spelling: "long long"
+                        })
+                    }),
+                    IR.Struct.StructField({
+                        name: "doubleVal",
+                        offset: 0,
+                        type: IR.PrimitiveType({
+                            alignment: 8,
+                            canonical: "double",
+                            size: 8,
+                            specifier: "Float64",
+                            spelling: "double"
+                        })
+                    })
+                ]
+            })
+
+            _AssertUnionExtraction(A_ThisFunc, code, expected)
         }
     }
 

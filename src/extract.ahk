@@ -1,6 +1,6 @@
 #Requires AutoHotkey v2.1-alpha.30
 
-#Import "IR\Struct" { Struct, StructField }
+#Import "IR\Struct" { Struct, Union, StructField }
 #Import "IR\Enum" { Enum, EnumField }
 #Import "IR\Type" { Type, PrimitiveType, PointerType, ArrayType, OpaqueType, NamedType, TypedefType }
 #Import "log4ahk\Log" { Log, Level as LogLevel }
@@ -45,10 +45,13 @@ Visit(registry, cursor, parent) {
     switch cursor.kind {
         case CursorKind.StructDecl:
             ExtractStruct(registry, cursor)
+        case CursorKind.UnionDecl:
+            ExtractUnion(registry, cursor)
         case CursorKind.EnumDecl:
             ExtractEnum(registry, cursor)
         default:
-            Log.Trace(Format("Unhanlded cursor kind '{1}': {2} ", cursor.kind, cursor.DisplayName))
+            Log.Trace(Format("Unhanlded cursor kind '{1}' ({2}): {3} ",
+                cursor.KindSpelling, cursor.kind, cursor.DisplayName))
     }
 
     return CXChildVisitResult.Continue
@@ -61,9 +64,24 @@ Visit(registry, cursor, parent) {
  * @param {CXCursor} cursor Cursor, type assumed to be StructDecl
  * @returns {void} nothing
  */
-ExtractStruct(registry, cursor) {
+ExtractStruct(registry, cursor) => _ExtractRecordType(Struct, registry, cursor)
+
+/**
+ * Extract a union into the registry
+ * 
+ * @param {Map<String, Type>} registry type registry, keyed by USR
+ * @param {CXCursor} cursor Cursor, type assumed to be UnionDecl
+ * @returns {void} nothing 
+ */
+ExtractUnion(registry, cursor) => _ExtractRecordType(Union, registry, cursor)
+
+/**
+ * Internal function to extract either a union or a struct - their shapes are identical,
+ * just the types differ
+ */
+_ExtractRecordType(recordType, registry, cursor) {
     cursorType := cursor.Type   ; Save some DllCalls
-    extracted := Struct({
+    extracted := recordType.Call({
         usr: cursor.USR,
         name: cursor.Spelling,
         fields: cursor.Children()
