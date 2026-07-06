@@ -31,6 +31,12 @@ export class Function extends Record {
      * @type {Type}
      */
     returnType := Type
+
+    /**
+     * The file that this declaration comes from
+     * @type {String}
+     */
+    sourceFile := String
 }
 
 export class Argument extends Record {

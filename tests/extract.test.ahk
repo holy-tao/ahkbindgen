@@ -199,6 +199,7 @@ class ExtractTests {
 
             expected := IR.Struct.Struct({
                 usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
                 name: "Point",
                 fields: [
                     IR.Struct.StructField({ name: "x", type: _Int(), offset: 0 }),
@@ -224,6 +225,7 @@ class ExtractTests {
 
             expected := IR.Struct.Struct({
                 usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
                 name: "Padded",
                 fields: [
                     IR.Struct.StructField({ name: "a", type: _Char(),  offset: 0 }),
@@ -247,6 +249,7 @@ class ExtractTests {
 
             expected := IR.Struct.Struct({
                 usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
                 name: "Buffer",
                 fields: [
                     IR.Struct.StructField({ name: "len", type: _Int(), offset: 0 }),
@@ -277,6 +280,7 @@ class ExtractTests {
 
             expected := IR.Struct.Struct({
                 usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
                 name: "Vec3",
                 fields: [
                     IR.Struct.StructField({
@@ -318,6 +322,7 @@ class ExtractTests {
 
             expected := IR.Struct.Struct({
                 usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
                 name: "Outer",
                 fields: [
                     IR.Struct.StructField({
@@ -351,6 +356,7 @@ class ExtractTests {
 
             expected := IR.Struct.Union({
                 usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
                 name: "IntOrDouble",
                 fields: [
                     IR.Struct.StructField({
@@ -394,6 +400,7 @@ class ExtractTests {
 
             expected := IR.Enum.Enum({
                 usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
                 name: "Result",
                 underlying: IR.PrimitiveType({
                     alignment: 4,

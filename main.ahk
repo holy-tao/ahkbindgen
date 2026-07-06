@@ -1,12 +1,15 @@
 
 #Import "libclang" { CXString }
 #Import "log4ahk\Log" { Log }
+#Import "utils\StringBuilder" { StringBuilder }
 
 ; Side-effect adds more methods to Array.Prototype
 #Import "Extensions\ArrayExtensions"
 
 #Import "src\cli.ahk" { ParseArgs, LoadLibClang }
 #Import "src\extract.ahk" { Extract }
+
+#Import "src\emit\EmitEnum" { EmitEnum }
 
 ; 1. Parse args and find libclang
 paths := ParseArgs(A_Args)
@@ -15,5 +18,5 @@ Log.Info(DllCall("libclang\clang_getClangVersion", CXString).ToString())
 
 for path in paths {
     isDirectory := inStr(FileGetAttrib(path), "D")
-    Extract(path)
+    Extract(path, registry := Map())
 }

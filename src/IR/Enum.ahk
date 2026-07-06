@@ -31,6 +31,12 @@ export class Enum extends Record {
      * @type {Array<EnumField>}
      */
     fields := [ArrayOf.Bind(EnumField), []]
+
+    /**
+     * The file that this declaration comes from
+     * @type {String}
+     */
+    sourceFile := String
 }
 
 /**

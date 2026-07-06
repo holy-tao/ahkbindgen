@@ -15,9 +15,9 @@
  * Extract types and functions from the header file at `filepath` into the IR
  * 
  * @param {String} filepath path to the header file. Assumed to exist 
- * @returns {unset?} 
+ * @returns {Map<String, Record>} map of USR -> extracted declarations 
  */
-export Extract(filepath) {
+export Extract(filepath, registry) {
     Log.Info("Parsing header " filepath)
 
     idx := CXIndex.Create()
@@ -30,19 +30,20 @@ export Extract(filepath) {
     ProcessDiagnostics(tu)
 
     ; Keyed by USR so that `NamedType` references (and anonymous records) resolve unambiguously in a later pass.
-    registry := Map()
     tu.cursor.Visit(Visit.Bind(registry))
 }
 
 /**
  * Visitor for the tree walk - collects types we care about into the types map
- * @param {Map<String, Type>} registry USR -> extracted declaration
+ * @param {Map<String, Record>} registry USR -> extracted declaration
  * @param {CXCursor} cursor
  * @param {CXCursor} parent
  * @returns {CXChildVisitResult}
  */
 Visit(registry, cursor, parent) {
-    ; TODO check source file and excluded libraries
+    if cursor.location.IsInSystemHeader
+        return CXChildVisitResult.Continue
+    
     switch cursor.kind {
         case CursorKind.FunctionDecl:
             ExtractFunction(registry, cursor)
@@ -70,6 +71,7 @@ Visit(registry, cursor, parent) {
 ExtractFunction(registry, cursor) {
     extracted := Function({
         usr: cursor.USR,
+        sourceFile: cursor.location.FileLocation().file.name,
         name: cursor.Spelling,
         returnType: ExtractType(cursor.ResultType),
         arguments: _ExtractArguments(cursor)
@@ -125,6 +127,7 @@ _ExtractRecordType(recordType, registry, cursor) {
     cursorType := cursor.Type   ; Save some DllCalls
     extracted := recordType.Call({
         usr: cursor.USR,
+        sourceFile: cursor.location.FileLocation().file.name,
         name: cursor.Spelling,
         fields: cursor.Children()
             .Filter((c) => c.kind == CursorKind.FieldDecl)
@@ -150,6 +153,7 @@ _ExtractRecordType(recordType, registry, cursor) {
 ExtractEnum(registry, cursor) {
     extracted := Enum({
         usr: cursor.USR,
+        sourceFile: cursor.location.FileLocation().file.name,
         name: cursor.Spelling,
         underlying: ExtractType(cursor.EnumIntegerType),
         fields: cursor.Children()

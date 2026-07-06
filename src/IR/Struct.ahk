@@ -25,6 +25,12 @@ export class Struct extends Record {
      * @type {Array<Field>}
      */
     fields := [ArrayOf.Bind(StructField), []]
+
+    /**
+     * The file that this declaration comes from
+     * @type {String}
+     */
+    sourceFile := String
 }
 
 /**
@@ -48,6 +54,12 @@ export class Union extends Record {
      * @type {Array<Field>}
      */
     fields := [ArrayOf.Bind(StructField), []]
+
+    /**
+     * The file that this declaration comes from
+     * @type {String}
+     */
+    sourceFile := String
 }
 
 /**
