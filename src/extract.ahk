@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2.1-alpha.30
 
 #Import "IR\Struct" { Struct, Union, StructField }
+#Import "IR\Function" { Function, Argument }
 #Import "IR\Enum" { Enum, EnumField }
 #Import "IR\Type" { Type, PrimitiveType, PointerType, ArrayType, OpaqueType, NamedType, TypedefType }
 #Import "log4ahk\Log" { Log, Level as LogLevel }
@@ -43,6 +44,8 @@ export Extract(filepath) {
 Visit(registry, cursor, parent) {
     ; TODO check source file and excluded libraries
     switch cursor.kind {
+        case CursorKind.FunctionDecl:
+            ExtractFunction(registry, cursor)
         case CursorKind.StructDecl:
             ExtractStruct(registry, cursor)
         case CursorKind.UnionDecl:
@@ -55,6 +58,45 @@ Visit(registry, cursor, parent) {
     }
 
     return CXChildVisitResult.Continue
+}
+
+/**
+ * Extract a function type into the registry.
+ * 
+ * @param {Map<String, Type>} registry type registry, keyed by USR
+ * @param {CXCursor} cursor Cursor, type assumed to be FunctionDecl
+ * @returns {void} 
+ */
+ExtractFunction(registry, cursor) {
+    extracted := Function({
+        usr: cursor.USR,
+        name: cursor.Spelling,
+        returnType: ExtractType(cursor.ResultType),
+        arguments: _ExtractArguments(cursor)
+    })
+
+    Log.Debug("Extracted " String(extracted))
+    registry[extracted.usr] := extracted
+}
+
+/**
+ * Extract and return an array of function arguments, given a cursor to the function
+ * 
+ * @param {CXCursor} cursor Cursor, type assumed to be FunctionDecl
+ * @returns {Array<Argument>} the arguments
+ */
+_ExtractArguments(cursor) {
+    args := []
+    loop cursor.NumArguments {
+        arg := cursor.Argument(A_Index - 1)
+        extracted := Argument({
+            name: arg.Spelling,
+            type: ExtractType(arg.Type)
+        })
+        args.Push(extracted)
+    }
+
+    return args
 }
 
 /**
