@@ -4,14 +4,14 @@
     {
       "name": "AhkExtensions",
       "source": "git+git@github.com:holy-tao/AhkExtensions.git",
-      "resolved": "4ccbb2a9ae4603bc7513d590e24051d0133eca45",
-      "checksum": "sha256:3beb7e0007352c678f7d4b3173deb780421a323e3ac7e0f2ecfadbf2e6bebd3e"
+      "resolved": "96fce2226caa4d190f48b670f726d4bc54ad0048",
+      "checksum": "sha256:446e4852a9408c520f261208642dc36e6ac76699ec44a03b78b141790133cb4c"
     },
     {
       "name": "Utils",
       "source": "git+git@github.com:holy-tao/ahk-utils.git",
-      "resolved": "6ed47a723f0a34f64c362fafcdd205779ec785d2",
-      "checksum": "sha256:80b1e8cf3d0a0290f932359b1376163ef35c921b0e3624bfc77180b4a9ecd56d"
+      "resolved": "638defa3393dccd1ae7a42a01e1f1e343bba5a4c",
+      "checksum": "sha256:43eae8cdf57dc7f4bc5f4a4171f6eeed4a47955a078e1cecb7ca09a0d9061e6d"
     },
     {
       "name": "YAML64.ahk",

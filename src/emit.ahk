@@ -29,7 +29,7 @@ export default Emit(registry) {
         .GroupBy((t) => t.sourceFile)
 
     for source, types in extracted {
-        SplitPath(source, unset, unset, unset, &filename)
+        SplitPath(source, , , , &filename)
 
         sb := StringBuilder(512)
         sb.AppendLine("#Requires AutoHotkey v2.1-alpha.30").AppendLine()
