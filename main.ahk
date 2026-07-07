@@ -12,11 +12,11 @@
 #Import "src\emit.ahk" { Emit }
 
 ; 1. Parse args and find libclang
-paths := ParseArgs(A_Args)
+config := ParseArgs(A_Args)
 LoadLibClang()
 Log.Info(DllCall("libclang\clang_getClangVersion", CXString).ToString())
 
-for path in paths {
+for path in config.paths {
     isDirectory := inStr(FileGetAttrib(path), "D")
     Extract(path, registry := Map())
 }

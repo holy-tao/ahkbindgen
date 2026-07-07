@@ -7,6 +7,7 @@
 
 #Import "log4ahk\appenders\FileAppender" { FileAppender, ConsoleAppender }
 #Import "log4ahk\Log" { Log, Logger, Level as LogLevel }
+#Import "Config" { Config }
 
 Log.Configure(LogLevel.INFO)
 globalLogger := Logger()
@@ -28,11 +29,12 @@ Expect(arr, idx, errMessage) => idx > arr.Length ? throw(errMessage) : arr[idx]
  * by the caller
  * 
  * @param {Array<String>} args argv array to parse - should be A_Args
- * @returns {Array<String>} the filepaths specified by the caller
+ * @returns {Config} the filepaths specified by the caller
  */
 export ParseArgs(args) {
     i := 0
     paths := []
+    dll := ""
 
     while(i < args.Length) {
         switch arg := args[++i] {
@@ -42,6 +44,8 @@ export ParseArgs(args) {
             case "--log-file":
                 path := Expect(args, ++i, "--log-file requires an argument")
                 globalLogger.WithAppender(FileAppender(path))
+            case "--dll":
+                dll := Expect(args, ++i, "--dll requires an argument")
             default:
                 ; Assume non-flag options are paths
                 if !FileExist(arg) && !DirExist(arg)
@@ -50,7 +54,13 @@ export ParseArgs(args) {
         }
     }
 
-    return paths
+    ; TODO read this from config file
+    (dll) || throw(Error("--dll is required"))
+
+    return Config({
+        dll: dll,
+        paths: paths
+    })
 }
 
 /**
