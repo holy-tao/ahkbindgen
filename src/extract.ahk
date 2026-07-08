@@ -3,7 +3,7 @@
 #Import "IR\Struct" { Struct, Union, StructField }
 #Import "IR\Function" { Function, Argument }
 #Import "IR\Enum" { Enum, EnumField }
-#Import "IR\Type" { Type, PrimitiveType, PointerType, ArrayType, OpaqueType, NamedType, TypedefType }
+#Import "IR\Type" { Type, PrimitiveType, PointerType, ArrayType, OpaqueType, NamedType, TypedefType, VoidType }
 #Import "log4ahk\Log" { Log, Level as LogLevel }
 #Import "libclang" {
     CXIndex,
@@ -246,6 +246,9 @@ ExtractType(type) {
         case CXTypeKind.SChar, CXTypeKind.Char_S, CXTypeKind.Short, CXTypeKind.Int,
              CXTypeKind.Long, CXTypeKind.LongLong:
             return Primitive(meta, IntSpecifier(false, c.SizeOf))
+
+        case CXTypeKind.Void:
+            return VoidType(meta)
 
         ; everything else: C++ refs/member ptrs, __int128, _Complex, __m128, _Float16, unexposed, etc
         default:

@@ -78,6 +78,13 @@ export class OpaqueType extends Type {
 }
 
 /**
+ * Void - not representable, and we must never try to read it
+ */
+export class VoidType extends Type {
+    ToSpecifier() => "void"
+}
+
+/**
  * A pointer to another type. Emitted as `<pointee>.Ptr`.
  */
 export class PointerType extends Type {
