@@ -15,17 +15,22 @@
  * Extract types and functions from the header file at `filepath` into the IR
  * 
  * @param {String} filepath path to the header file. Assumed to exist 
+ * @param {Map<String, Type>} registry type registry to extract types into
+ * @param {Array<String>} includePaths include paths to use
  * @returns {Map<String, Record>} map of USR -> extracted declarations 
  */
-export Extract(filepath, registry) {
+export Extract(filepath, registry, includePaths) {
     Log.Info("Parsing header " filepath)
 
     idx := CXIndex.Create()
-    ; FIXME don't hardcode include paths - either search or take cli args (or both)
-    includePath := "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Tools\MSVC\14.50.35717\include"
+
+    clangArgs := ["-std=c11"]
+    for path in includePaths {
+        clangArgs.Push("-I", path)
+    }
 
     flags := TranslationUnitFlags.SkipFunctionBodies | TranslationUnitFlags.DetailedPreprocessingRecord
-    tu := idx.ParseTranslationUnit(filepath, ["-std=c11", "-I", includePath], flags)
+    tu := idx.ParseTranslationUnit(filepath, clangArgs, flags)
 
     ProcessDiagnostics(tu)
 

@@ -22,7 +22,7 @@ OnError((thrown, mode) {
 })
 
 ; Specifically for argument parsing, get arr[idx] or die with the given message
-Expect(arr, idx, errMessage) => idx > arr.Length ? throw(errMessage) : arr[idx]
+Expect(arr, idx, argName) => idx > arr.Length ? throw(argName " requires an argument") : arr[idx]
 
 /**
  * Parse and validate arguments, configure global settings, returning the filepaths specified
@@ -35,17 +35,20 @@ export ParseArgs(args) {
     i := 0
     paths := []
     dll := ""
+    includes := []
 
     while(i < args.Length) {
         switch arg := args[++i] {
             case "--log-level":
-                level := Expect(args, ++i, "--log-level requires an argument")
+                level := Expect(args, ++i, arg)
                 Log.Configure(LogLevel.Resolve(level))
             case "--log-file":
-                path := Expect(args, ++i, "--log-file requires an argument")
+                path := Expect(args, ++i, arg)
                 globalLogger.WithAppender(FileAppender(path))
             case "--dll":
-                dll := Expect(args, ++i, "--dll requires an argument")
+                dll := Expect(args, ++i, arg)
+            case "-I", "--include":
+                includes.Push(Expect(args, ++i, arg))
             default:
                 ; Assume non-flag options are paths
                 if !FileExist(arg) && !DirExist(arg)
@@ -59,44 +62,7 @@ export ParseArgs(args) {
 
     return Config({
         dll: dll,
-        paths: paths
+        paths: paths,
+        includes: includes
     })
-}
-
-/**
- * Finds and loads `libclang.dll`, or errors out if not succesful. Tries, in order:
- * 1. the `LIBCLANG_PATH` environment variable (which, by convention, is assumed to point at the actual .dll file
- *    and not a directory).
- * 2. `A_ProgramFiles\LLVM\bin\libclang.dll` (the default install path on Windows)
- * 3. The default dll search path (via `LoadLibraryW`)
- * 
- * If libclang isn't found the program exits with a fatal error.
- */
-export LoadLibClang() {
-    ; Not worried about the HMODULE, fine to keep the lib loaded the whole time
-    TryLoad(path) => DllCall("LoadLibraryW", IntPtr, StrPtr(path), IntPtr)
-
-    probes := [
-        A_ProgramFiles "\LLVM\bin\libclang.dll"
-    ]
-
-    if envPath := EnvGet("LIBCLANG_PATH")
-        probes.InsertAt(0, envPath)
-
-    ;https://releases.llvm.org/download.html
-
-    for path in probes {
-        Log.Trace(Format.Bind("Probing '{1}' for libclang.dll", path))
-
-        if FileExist(path) && TryLoad(path){
-            Log.Debug(Format.Bind("Loaded libclang.dll from '{1}'", path))
-            return
-        }
-    }
-
-    ; last resort, try the standard search path
-    if !TryLoad("libclang.dll") {
-        Log.Fatal("Failed to load libclang.dll.`nDownload it from https://releases.llvm.org/, or try setting the LIBCLANG_PATH environment variable")
-        ExitApp(2)
-    }
 }

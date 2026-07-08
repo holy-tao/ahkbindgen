@@ -47,4 +47,11 @@ export class Config extends Record {
      * @type {Array<String>}
      */
     paths := ArrayOf.Bind(AbsoluteExtantPath)
+
+    /**
+     * List of user-supplied include paths, *appended* (same as clang) to the default
+     * include path
+     * @type {Array<String>}
+     */
+    includes := ArrayOf.Bind(AbsoluteExtantPath)
 }
