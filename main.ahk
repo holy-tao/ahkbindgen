@@ -21,6 +21,7 @@ includePaths := GetDefaultIncludePaths(clangPath)
 includePaths.Push(config.includes*)
 
 Log.Info(DllCall("libclang\clang_getClangVersion", CXString).ToString())
+Log.Debug("Include path(s): " String(includePaths))
 
 worklist := config.paths.clone()
 registry := Map()

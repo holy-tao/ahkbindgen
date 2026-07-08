@@ -1,10 +1,10 @@
 #Requires AutoHotkey v2.1-alpha.30
 
 #Import "log4ahk\Log" { Log }
-#Import "Utils\shell\Cmd" { Cmd }
+#Import "Utils\shell\Cmd" { Cmd, CmdExpect }
 
 /**
- * Utils for finding and invoking clang and related binaries
+ * Utils for finding and invoking clang and its related items. Also resolving include paths now.
  */
 
 /**
@@ -90,6 +90,65 @@ export FindClang() {
 }
 
 /**
+ * Find default include paths from:
+ * - The Windows SDK (typically required, the C stdlib comes from here)
+ * - Clang's default
+ * - MSVC's include path
+ * 
+ * @param {String} clangPath path to clang.exe 
+ * @returns {Array<String>} the standard include paths we could find 
+ */
+export GetDefaultIncludePaths(clangPath) {
+    paths := []
+    paths.Push(GetClangDefaultIncludePaths(clangPath)*)
+    paths.Push(GetWindowsSDKCStdLibPaths()*)
+    paths.Push(GetMSVCIncludePath())
+    return paths
+}
+
+/**
+ * Try to find the default Windows SDK and C Stdlib include directories. This searches
+ * the typical install locations that the Visual Studio Installer uses.
+ * 
+ * @returns {Array<String>} Windows SDK and C stdlib paths found (might be empty)
+ */
+GetWindowsSDKCStdLibPaths() {
+    WindowsKitsRoot := RegRead("HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots", "KitsRoot10", "")
+    if !WindowsKitsRoot
+        goto NoSdk
+
+    ; Find the most recent Windows SDK available
+    ; TODO maybe allow specifying a version? This is probably good enough for 99% of cases
+    sdkPath := "", newestVersion := "0.0.0.0"
+    loop files WindowsKitsRoot "Include\*", "D" {
+        if VerCompare(A_LoopFileName, newestVersion) >= 0 {
+            newestVersion := A_LoopFileName
+            sdkPath := A_LoopFileFullPath
+        }
+    }
+
+    if !sdkPath
+        goto NoSdk
+
+    return [
+        sdkPath "\ucrt",
+        sdkPath "\shared",
+        sdkPath "\um",
+        sdkPath "\winrt",
+    ].Filter(DirExist)
+
+NoSdk:
+    msg := Format("
+    (
+        No Windows Kits were found under '{1}'.
+        The C standard library and windows APIs may not be available to clang.
+        Consider installing using the Visual Studio Installer: https://visualstudio.microsoft.com/downloads/
+    )", WindowsKitsRoot)
+    Log.Warn(msg)
+    return []
+}
+
+/**
  * Get the default include paths from clang. Unfortunately there's no way to
  * do this with libclang, so we have to parse clang's output (which is, mercifully,
  * pretty straightforward)
@@ -97,7 +156,7 @@ export FindClang() {
  * @param {String} clangPath path to clang.exe
  * @returns {Array<String>} array of default include paths 
  */
-export GetDefaultIncludePaths(clangPath) {
+GetClangDefaultIncludePaths(clangPath) {
     ; TODO we can improve performance by working out some actual subprocess plumbing
     (!DirExist(A_Temp "\ahkbindgen\") )&& DirCreate(A_Temp "\ahkbindgen\")
     
@@ -105,17 +164,13 @@ export GetDefaultIncludePaths(clangPath) {
     FileAppend("", tempFile) ; Create the file
 
     clangCmd := Format("`"{1}`" -E -v -x c NUL", clangPath)
-    fullCmd := Format("{1} /c {2} 2>{3}", A_ComSpec, clangCmd, tempFile)
-    Log.Debug(fullCmd)
+    Log.Debug(clangCmd)
 
-    exitCode := RunWait(fullCmd, , "Hide")
+    exitCode := Cmd(clangCmd, , &out)
     if exitCode != 0 {
-        detail := "no additional details"
-        try detail := FileRead(tempFile)
-        throw Error("Clang exited with non-zero exit code " exitCode, , detail)
+        throw Error("Clang exited with non-zero exit code " exitCode)
     }
 
-    Log.Trace(FileRead.Bind(tempFile))
     out := FileOpen(tempFile, "r")
     list := []
     inSearchList := false
@@ -133,6 +188,24 @@ export GetDefaultIncludePaths(clangPath) {
     }
     until out.AtEOF
 
-    Log.Debug("Got default search list: " String(list))
+    Log.Trace("Got default search list from clang: " String(list))
     return list
+}
+
+/**
+ * Find the MSVC include path using vswhere. This will use the latest installed MSVC.
+ * 
+ * @returns {String} the MSVC include path
+ */
+GetMSVCIncludePath() {
+    ; MSVC component for VSWHERE
+    static MSVC := "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
+    static VSWHERE := "`"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe`""
+
+    command := VSWHERE " -latest -products `"*`" -requires " MSVC " -property installationPath"
+
+    installPath := CmdExpect(command)
+    toolsVersion := FileRead(installPath "\VC\Auxiliary\Build\Microsoft.VCToolsVersion.default.txt")
+
+    return installPath "\VC\Tools\MSVC\" toolsVersion "\include"
 }
