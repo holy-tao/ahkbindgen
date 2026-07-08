@@ -46,21 +46,31 @@ export Extract(filepath, registry, includePaths) {
  * @returns {CXChildVisitResult}
  */
 Visit(registry, cursor, parent) {
-    if cursor.location.IsInSystemHeader
+    if cursor.location.IsInSystemHeader || registry.Has(cursor.USR)
         return CXChildVisitResult.Continue
     
-    switch cursor.kind {
-        case CursorKind.FunctionDecl:
-            ExtractFunction(registry, cursor)
-        case CursorKind.StructDecl:
-            ExtractStruct(registry, cursor)
-        case CursorKind.UnionDecl:
-            ExtractUnion(registry, cursor)
-        case CursorKind.EnumDecl:
-            ExtractEnum(registry, cursor)
-        default:
-            Log.Trace(Format("Unhanlded cursor kind '{1}' ({2}): {3} ",
-                cursor.KindSpelling, cursor.kind, cursor.DisplayName))
+    try {
+        switch cursor.kind {
+            case CursorKind.FunctionDecl:
+                ExtractFunction(registry, cursor)
+            case CursorKind.StructDecl:
+                ExtractStruct(registry, cursor)
+            case CursorKind.UnionDecl:
+                ExtractUnion(registry, cursor)
+            case CursorKind.EnumDecl:
+                ExtractEnum(registry, cursor)
+            default:
+                Log.Trace(Format("Unhanlded cursor kind '{1}' ({2}): {3} ",
+                    cursor.KindSpelling, cursor.kind, cursor.DisplayName))
+        }
+    }
+    catch Error as err {
+        try {
+            loc := cursor.location.FileLocation()
+            err.Message .= Format("`nWhile extracting {1} '{2}' from '{3}:{4}:{5}'",
+                cursor.KindSpelling, cursor.spelling, loc.file.Name, loc.line, loc.column)
+        }
+        throw err
     }
 
     return CXChildVisitResult.Continue
