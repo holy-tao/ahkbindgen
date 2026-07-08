@@ -138,6 +138,7 @@ _AssertUnionExtraction(testName, code, expected, structName?) {
 _Int() => IR.PrimitiveType({ alignment: 4, canonical: "int", size: 4, specifier: "Int32", spelling: "int" })
 _Short() => IR.PrimitiveType({ alignment: 2, canonical: "short", size: 2, specifier: "Int16", spelling: "short" })
 _Char() => IR.PrimitiveType({ alignment: 1, canonical: "char", size: 1, specifier: "Int8", spelling: "char" })
+_UInt() => IR.PrimitiveType({ alignment: 4, canonical: "unsigned int", size: 4, specifier: "UInt32", spelling: "unsigned int" })
 
 class ExtractTests {
     class Types {
@@ -341,6 +342,55 @@ class ExtractTests {
             })
 
             _AssertStructExtraction(A_ThisFunc, code, expected, "Outer")
+        }
+
+        ; Bit fields carry their width and bit offset so an emitter can mask/shift; the byte `offset` is the byte
+        ; the field starts in. All three named fields (and the anonymous padding) share one `unsigned` storage unit.
+        Structs_WithBitFields_CaptureWidthAndBitOffset() {
+            code := "
+            (
+                struct Bits {
+                    unsigned a : 1;
+                    unsigned b : 2;
+                    unsigned   : 5;
+                    unsigned c : 1;
+                };
+            )"
+
+            expected := IR.Struct.Struct({
+                usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
+                name: "Bits",
+                fields: [
+                    IR.Struct.StructField({ name: "a", type: _UInt(), offset: 0, bitWidth: 1, bitOffset: 0 }),
+                    IR.Struct.StructField({ name: "b", type: _UInt(), offset: 0, bitWidth: 2, bitOffset: 1 }),
+                    ; the anonymous 5-bit padding (bits 3-7) is dropped, so c lands at bit 8 (byte 1)
+                    IR.Struct.StructField({ name: "c", type: _UInt(), offset: 1, bitWidth: 1, bitOffset: 8 }),
+                ]
+            })
+
+            _AssertStructExtraction(A_ThisFunc, code, expected)
+        }
+
+        ; A regular field must not be misreported as a bit field: bitWidth/bitOffset stay at their -1 sentinel.
+        Structs_NonBitFields_HaveNoBitWidth() {
+            code := "
+            (
+                struct Plain {
+                    int x;
+                };
+            )"
+
+            expected := IR.Struct.Struct({
+                usr: "unknown",
+                sourceFile: A_Temp "\" A_ThisFunc ".h",
+                name: "Plain",
+                fields: [
+                    IR.Struct.StructField({ name: "x", type: _Int(), offset: 0, bitWidth: -1, bitOffset: -1 }),
+                ]
+            })
+
+            _AssertStructExtraction(A_ThisFunc, code, expected)
         }
 
         ; Unions use the exact same machinery as structs, so no need to stress test them

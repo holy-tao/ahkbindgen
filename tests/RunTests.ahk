@@ -16,9 +16,11 @@
 
 #Import "extract.test.ahk" { ExtractTests }
 
-#Import "../src/cli" {ParseArgs, LoadLibClang}
+; Importing cli configures the global logger as a side effect; clang owns libclang loading (auto-probes for
+; the dll, so no --dll is needed here).
+#Import "../src/cli" {}
+#Import "../src/clang" { LoadLibClang }
 
-ParseArgs(["--log-level", "trace"])
 LoadLibClang()
 
 YUnit.Use(YunitResultCounter, YUnitJUnit, YUnitStdOut).Test(

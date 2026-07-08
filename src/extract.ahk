@@ -146,16 +146,38 @@ _ExtractRecordType(recordType, registry, cursor) {
         name: cursor.Spelling,
         fields: cursor.Children()
             .Filter((c) => c.kind == CursorKind.FieldDecl)
-            .Map((c) => StructField({
-                name: c.Spelling,
-                type: ExtractType(c.Type),
-                ; libclang reports field offsets in bits
-                offset: (bits := cursorType.OffsetOf(c.Spelling)) >= 0 ? bits // 8 : bits
-            }))
+            ; Anonymous bit-fields are unnamed padding and OffsetOf cannot resolve them. Drop them
+            ; so that lookups for the actual named fields can resolve
+            .Filter((c) => !(c.Spelling == "" && c.BitWidth >= 0))
+            .Map(_ExtractField.Bind(cursorType))
     })
 
     Log.Debug("Extracted " String(extracted))
     registry[extracted.usr] := extracted
+}
+
+/**
+ * Extract a single struct/union field
+ *
+ * @param {CXType} recordType the containing record's type, used to query field offsets
+ * @param {CXCursor} cursor a FieldDecl cursor
+ * @returns {StructField} the extracted field
+ */
+_ExtractField(recordType, cursor) {
+    ; libclang reports field offsets in bits; for a non-bit-field this is always a whole number of bytes.
+    bits := recordType.OffsetOf(cursor.Spelling)
+    if bits < 0
+        throw ValueError(Format("libclang could not compute the offset of field '{1}' (layout error {2})",
+            cursor.Spelling, bits), -1, bits)
+
+    bitWidth := cursor.BitWidth   ; -1 when this field is not a bit field
+    return StructField({
+        name: cursor.Spelling,
+        type: ExtractType(cursor.Type),
+        offset: bits // 8,
+        bitWidth: bitWidth,
+        bitOffset: bitWidth >= 0 ? bits : -1
+    })
 }
 
 /**

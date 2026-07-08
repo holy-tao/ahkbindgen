@@ -79,10 +79,26 @@ export class StructField extends Record {
     name := String
 
     /**
-     * The field's offset within the larger struct
+     * The field's offset within the larger struct, in bytes. For a bit field this is the byte the field starts
+     * in (`bitOffset // 8`).
      * @type {Integer}
      */
     offset := NonNegativeInteger ; Actually comes from the Struct / Record's type information
+
+    /**
+     * The field's width in bits if it is a bit field, otherwise -1. A non-negative value marks this field as a
+     * bit field, meaning it occupies a sub-byte region and cannot be read as a whole field of its `type`.
+     * @type {Integer}
+     */
+    bitWidth := [Integer, -1]
+
+    /**
+     * For a bit field, the field's offset in *bits* from the start of the containing record; -1 for a
+     * non-bit-field. `offset` is the byte this falls in (`bitOffset // 8`) and the shift within the field's
+     * storage unit is `Mod(bitOffset, 8)`.
+     * @type {Integer}
+     */
+    bitOffset := [Integer, -1]
 }
 
 ; Private
