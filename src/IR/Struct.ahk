@@ -2,64 +2,28 @@
 
 #Import "Utils\Record" { Record }
 #Import "Type" { Type, IsType }
-#Import "Common" { ArrayOf }
+#Import "Common" { ArrayOf, Emittable }
 
 /**
  * A struct definition
  */
-export class Struct extends Record {
-    /**
-     * The declaration's USR - a stable identity key, used to resolve `NamedType` references to this struct.
-     * @type {String}
-     */
-    usr := String
-
-    /**
-     * The name of the struct (may be empty for an anonymous struct; synthesized at emit time)
-     * @type {String}
-     */
-    name := String
-
+export class Struct extends Emittable {
     /**
      * The struct's fields
      * @type {Array<Field>}
      */
     fields := [ArrayOf.Bind(StructField), []]
-
-    /**
-     * The file that this declaration comes from
-     * @type {String}
-     */
-    sourceFile := String
 }
 
 /**
  * A union
  */
-export class Union extends Record {
-    /**
-     * The declaration's USR - a stable identity key, used to resolve `NamedType` references to this union.
-     * @type {String}
-     */
-    usr := String
-
-    /**
-     * The name of the union (may be empty for an anonymous union; synthesized at emit time)
-     * @type {String}
-     */
-    name := String
-
+export class Union extends Emittable {
     /**
      * The union's fields
      * @type {Array<Field>}
      */
     fields := [ArrayOf.Bind(StructField), []]
-
-    /**
-     * The file that this declaration comes from
-     * @type {String}
-     */
-    sourceFile := String
 }
 
 /**

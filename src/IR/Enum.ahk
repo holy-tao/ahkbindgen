@@ -2,24 +2,12 @@
 
 #Import "Utils\Record" { Record }
 #Import "Type" { PrimitiveType }
-#Import "Common" { ArrayOf }
+#Import "Common" { ArrayOf, Emittable }
 
 /**
  * An enum
  */
-export class Enum extends Record {
-    /**
-     * The declaration's USR - a stable identity key, used to resolve `NamedType` references to this struct.
-     * @type {String}
-     */
-    usr := String
-
-    /**
-     * The enum's name
-     * @type {String}
-     */
-    name := String
-
+export class Enum extends Emittable {
     /**
      * The enum's underlying type
      * @type {PrimitiveType}
@@ -31,12 +19,6 @@ export class Enum extends Record {
      * @type {Array<EnumField>}
      */
     fields := [ArrayOf.Bind(EnumField), []]
-
-    /**
-     * The file that this declaration comes from
-     * @type {String}
-     */
-    sourceFile := String
 }
 
 /**

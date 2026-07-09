@@ -2,6 +2,21 @@
 
 #Import "Utils\Record" { Record }
 #Import "IR\Common" { ArrayOf }
+#Import "Windows\Win32\Storage\FileSystem\Apis" { GetFullPathNameW }
+
+/**
+ * Converts `path` into an absolute path
+ * 
+ * @param {String} path a path 
+ * @returns {String} `path` absolute
+ */
+AbsolutePath(path) {
+    chars := GetFullPathNameW(path, 0, 0, 0)
+    strBuf := Buffer(chars * 2, 0)
+    GetFullPathNameW(path, chars, strBuf.ptr, 0)
+    
+    return StrGet(strBuf, "UTF-16")
+}
 
 /** 
  * Record transform that asserts that `path` is a path to a real file or directory
