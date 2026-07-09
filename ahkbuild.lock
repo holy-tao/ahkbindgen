@@ -8,6 +8,12 @@
       "checksum": "sha256:446e4852a9408c520f261208642dc36e6ac76699ec44a03b78b141790133cb4c"
     },
     {
+      "name": "AhkWin32Projection",
+      "source": "git+git@github.com:holy-tao/AhkWin32Projection.git?branch=feat/2.1",
+      "resolved": "7e07f8b443a5babeee30e943a43d206c163a318a",
+      "checksum": "sha256:13802ad54e4b8bb531c5c11b47261b9dd340311023f79cc6a14ee64f717ad57f"
+    },
+    {
       "name": "Utils",
       "source": "git+git@github.com:holy-tao/ahk-utils.git",
       "resolved": "638defa3393dccd1ae7a42a01e1f1e343bba5a4c",

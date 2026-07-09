@@ -35,6 +35,12 @@
     },
     "Utils": {
       "git": "git@github.com:holy-tao/ahk-utils.git"
+    },
+    "AhkWin32Projection": {
+      "git": "git@github.com:holy-tao/AhkWin32Projection.git",
+      "branch": "feat/2.1",
+      "subdir": "Windows",
+      "alias": "Windows"
     }
   }
 }

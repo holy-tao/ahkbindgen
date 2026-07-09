@@ -25,17 +25,10 @@ AbsolutePath(path) {
  * @returns {String} `path`, canonicalized
  */
 AbsoluteExtantPath(path) {
-    chars := DllCall("GetFullPathNameW", IntPtr, StrPtr(path),
-        Int32, 0, IntPtr, 0, IntPtr, 0, Int32)
+    chars := GetFullPathNameW(path, 0, 0, 0)
 
     strBuf := Buffer(chars * 2, 0)
-    DllCall("GetFullPathNameW",
-        IntPtr, StrPtr(path),
-        Int32, chars,
-        IntPtr, strBuf.ptr,
-        IntPtr, 0,
-        Int32
-    ) || throw(OSError())
+    GetFullPathNameW(path, chars, strBuf.ptr, 0)
     
     fullPath := StrGet(strBuf, "UTF-16")
     if !FileExist(fullPath) && !DirExist(fullPath)
