@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "trust": [
+    {
+      "package": "YAML64.ahk",
+      "checksum": "sha256:62c745988f250e4fcb3d81a4eaead74480255f6a03e0d4a69f62f55173c9b258",
+      "files": []
+    }
+  ]
+}
