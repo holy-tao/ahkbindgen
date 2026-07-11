@@ -36,6 +36,7 @@ export ParseArgs(args) {
     paths := []
     dll := ""
     includes := []
+    output := A_ScriptFullPath
 
     while(i < args.Length) {
         switch arg := args[++i] {
@@ -49,6 +50,8 @@ export ParseArgs(args) {
                 dll := Expect(args, ++i, arg)
             case "-I", "--include":
                 includes.Push(Expect(args, ++i, arg))
+            case "-o", "--output":
+                output := Expect(args, ++i, arg)
             default:
                 ; Assume non-flag options are paths
                 if !FileExist(arg) && !DirExist(arg)
@@ -63,6 +66,7 @@ export ParseArgs(args) {
     return Config({
         dll: dll,
         paths: paths,
-        includes: includes
+        includes: includes,
+        output: output
     })
 }

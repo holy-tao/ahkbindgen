@@ -25,12 +25,7 @@ AbsolutePath(path) {
  * @returns {String} `path`, canonicalized
  */
 AbsoluteExtantPath(path) {
-    chars := GetFullPathNameW(path, 0, 0, 0)
-
-    strBuf := Buffer(chars * 2, 0)
-    GetFullPathNameW(path, chars, strBuf.ptr, 0)
-    
-    fullPath := StrGet(strBuf, "UTF-16")
+    fullPath := AbsolutePath(path)
     if !FileExist(fullPath) && !DirExist(fullPath)
         throw ValueError("No such file or directory: " fullPath)
 
@@ -62,4 +57,10 @@ export class Config extends Record {
      * @type {Array<String>}
      */
     includes := ArrayOf.Bind(AbsoluteExtantPath)
+
+    /**
+     * Path to the output directory for generated files
+     * @type {String}
+     */
+    output := AbsolutePath
 }

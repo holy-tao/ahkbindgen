@@ -26,6 +26,7 @@ Log.Debug("Include path(s): " String(includePaths))
 worklist := config.paths.clone()
 registry := Map()
 
+; 2. Extract types
 while worklist.Length > 0 {
     path := worklist.RemoveAt(1)
     if InStr(FileGetAttrib(path), "D") {
@@ -39,10 +40,23 @@ while worklist.Length > 0 {
     Extract(path, registry, includePaths)
 }
 
+;3. Render types into strings in memory
 emitted := Emit(registry)
 
-for header, code in emitted {
-    f := FileOpen(header ".ahk", "w", "UTF-8")
-    f.Write(code.ToString())
-    f.Close()
+; 4. Write types out to files on disk (parallelized)
+if !DirExist(config.output)
+    DirCreate(config.output)
+
+emitted.ForEach((h, c) => SetTimer(EmitOne.Bind(h, c), -1))
+
+EmitOne(header, code) {
+    try {
+        f := FileOpen(config.output "\" header ".ahk", "w", "UTF-8")
+        f.Write(code.ToString())
+        f.Close()
+    }
+    catch Error as err {
+        err.Message .= "`nEmitting ahk code for header " header
+        Log.Error(err)
+    }
 }
