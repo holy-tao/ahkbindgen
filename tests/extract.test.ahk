@@ -26,7 +26,8 @@ _Parse(code, testFunction, expectError := false) {
     flags := TranslationUnitFlags.SkipFunctionBodies | TranslationUnitFlags.DetailedPreprocessingRecord
     try {
         filepath := A_Temp "\" testFunction ".h"
-        FileAppend(code, filepath, "UTF-8")
+        ; Overwrite rather than append so prior runs can't corrupt the temp file
+        FileOpen(filepath, "w", "UTF-8").Write(code)
         tu := idx.ParseTranslationUnit(filepath, ["-std=c11", "-I", includePath], flags)
 
         if tu.HasErrors && !expectError {
