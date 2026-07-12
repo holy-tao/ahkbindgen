@@ -11,6 +11,8 @@
     CXTranslationUnit, TranslationUnitFlags,
     CursorKind, CXChildVisitResult, CXTypeKind
 }
+#Import "Windows\Win32\UI\Shell\Apis" { PathCchRemoveFileSpec }
+
 /**
  * Extract types and functions from the header file at `filepath` into the IR
  * 
@@ -27,6 +29,11 @@ export Extract(filepath, registry, includePaths) {
     clangArgs := ["-std=c11"]
     for path in includePaths {
         clangArgs.Push("-I", path)
+    }
+
+    ; If the given path is in an include directory, automatically include it
+    if (parentInclude := FindIncludeAncestor(filepath)) {
+        clangArgs.Push("-I", parentInclude)
     }
 
     flags := TranslationUnitFlags.SkipFunctionBodies | TranslationUnitFlags.DetailedPreprocessingRecord
@@ -356,4 +363,24 @@ ProcessDiagnostics(tu) {
         Log.Fatal("Libclang encountered error(s). Review the output above")
         ExitApp(2)
     }
+}
+
+/**
+ * If `path` is inside an `include` folder, returns the full path to that folder,
+ * otherwise an empty string
+ * 
+ * @param {String} path path to check 
+ * @returns {String} include path, or "" if not in one 
+ */
+FindIncludeAncestor(path) {
+    #DllLoad api-ms-win-core-path-l1-1-0.dll
+
+    static S_OK := 0
+    while PathCchRemoveFileSpec(StrPtr(path), StrLen(path)) == S_OK {
+        VarSetStrCapacity(&path, -1)
+        if path.EndsWith("include")
+            return path
+    }
+
+    return ""
 }
