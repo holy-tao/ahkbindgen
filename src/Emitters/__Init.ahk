@@ -3,3 +3,4 @@
 #Import export EmitEnum { * }
 #Import export EmitStruct as _EmitStruct { * }
 #Import export EmitFunction { * }
+#Import export EmitTypedef { * }

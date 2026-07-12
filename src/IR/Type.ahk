@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2.1-alpha.30
 
 #Import "Utils\Record" { Record }
+#Import "Common" { Emittable }
 
 /**
  * Transform for a field that holds any {@link Type} (polymorphically). Unlike using `Type` directly as a Record
@@ -13,6 +14,17 @@ export IsType(v) {
     if v is Type
         return v
     throw TypeError("Expected a Type, got a(n) " Type(v), -1, v)
+}
+
+/**
+ * A top-level typedef that will be emitted during codegen.
+ */
+export class EmittableTypedef extends Emittable {
+    /**
+     * The type of the emittble
+     * @type {Type}
+     */
+    underlying := IsType
 }
 
 /**

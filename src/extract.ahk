@@ -3,7 +3,16 @@
 #Import "IR\Struct" { Struct, Union, StructField }
 #Import "IR\Function" { Function, Argument }
 #Import "IR\Enum" { Enum, EnumField }
-#Import "IR\Type" { Type, PrimitiveType, PointerType, ArrayType, OpaqueType, NamedType, TypedefType, VoidType }
+#Import "IR\Type" {
+    EmittableTypedef,
+    PrimitiveType,
+    PointerType,
+    ArrayType,
+    OpaqueType,
+    NamedType,
+    TypedefType,
+    VoidType
+}
 #Import "log4ahk\Log" { Log, Level as LogLevel }
 #Import "libclang" {
     CXIndex,
@@ -66,6 +75,8 @@ Visit(registry, cursor, parent) {
                 ExtractUnion(registry, cursor)
             case CursorKind.EnumDecl:
                 ExtractEnum(registry, cursor)
+            case CursorKind.TypedefDecl:
+                ExtractTypedef(registry, cursor)
             default:
                 Log.Trace(Format("Unhanlded cursor kind '{1}' ({2}): {3} ",
                     cursor.KindSpelling, cursor.kind, cursor.DisplayName))
@@ -81,6 +92,33 @@ Visit(registry, cursor, parent) {
     }
 
     return CXChildVisitResult.Continue
+}
+
+/**
+ * Extract a type definition into the registry
+ * 
+ * @param {Map<String, Type>} registry type registry, keyed by USR
+ * @param {CXCursor} cursor Cursor, type assumed to be TypedefDecl
+ * @returns {void} 
+ */
+ExtractTypedef(registry, cursor) {
+    canon := cursor.UnderlyingType.Canonical
+
+    ; If the canonical type is a record or enum, we can be confident we're looking at
+    ; the actual typedef for it (e.g. the `typdef struct Foo { ... }` line; skip it, we
+    ; extract the underlying declaration already.
+    if canon.kind == CXTypeKind.Record || canon.kind == CXTypeKind.Enum
+        return
+
+    extracted := EmittableTypedef({
+        usr: cursor.USR,
+        sourceFile: cursor.location.FileLocation().file.name,
+        name: cursor.Spelling,
+        underlying: ExtractType(cursor.UnderlyingType) 
+    })
+
+    Log.Debug("Extracted " String(extracted))
+    registry[extracted.usr] := extracted
 }
 
 /**

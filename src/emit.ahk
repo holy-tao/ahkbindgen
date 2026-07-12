@@ -2,7 +2,7 @@
 
 #Import "Utils\StringBuilder" { StringBuilder }
 #Import "IR" as IR
-#Import "Emitters" { EmitEnum, EmitStruct, EmitUnion, EmitFunction }
+#Import "Emitters" { EmitEnum, EmitStruct, EmitUnion, EmitFunction, EmitTypedef }
 
 _Banner := Format("
 (
@@ -45,6 +45,8 @@ export default Emit(registry, dll) {
                     EmitUnion(t, registry, sb)
                 case t is IR.Function.Function:
                     EmitFunction(t, dll, registry, sb)
+                case t is IR.Type.EmittableTypedef:
+                    EmitTypedef(t, registry, sb)
                 default:
                     continue    ; Don't append a blank line for types we skip
             }
