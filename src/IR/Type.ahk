@@ -116,7 +116,7 @@ export class ArrayType extends Type {
      */
     length := [Integer, -1]
 
-    ToSpecifier() => this.elementType.ToSpecifier() (this.size >= 0 ? "[" this.size "]" : "[]")
+    ToSpecifier() => this.elementType.ToSpecifier() (this.length >= 0 ? "[" this.length "]" : "[]")
 }
 
 /**
