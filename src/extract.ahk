@@ -46,7 +46,7 @@ export Extract(filepath, registry, includePaths) {
  * @returns {CXChildVisitResult}
  */
 Visit(registry, cursor, parent) {
-    if cursor.location.IsInSystemHeader || registry.Has(cursor.USR)
+    if !cursor.location.IsFromMainFile || registry.Has(cursor.USR)
         return CXChildVisitResult.Continue
     
     try {

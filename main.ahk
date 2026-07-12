@@ -6,6 +6,7 @@
 ; Side-effect adds more methods to Array and Map Prototypes
 #Import "Extensions\ArrayExtensions"
 #Import "Extensions\MapExtensions"
+#Import "Extensions\StringExtensions"
 
 #Import "src\cli.ahk" { ParseArgs }
 #Import "src\clang" { LoadLibClang, FindClang, GetDefaultIncludePaths }
@@ -41,7 +42,7 @@ while worklist.Length > 0 {
 }
 
 ;3. Render types into strings in memory
-emitted := Emit(registry)
+emitted := Emit(registry, config.dll)
 
 ; 4. Write types out to files on disk (parallelized)
 if !DirExist(config.output)

@@ -18,7 +18,7 @@ export class Function extends Emittable {
      * The function's return type
      * @type {Type}
      */
-    returnType := Type
+    returnType := IsType
 }
 
 export class Argument extends Record {

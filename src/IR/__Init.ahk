@@ -7,3 +7,4 @@
 #Import export Struct {*}
 #Import export Enum {*}
 #Import export Type {*}
+#Import export Function {*}

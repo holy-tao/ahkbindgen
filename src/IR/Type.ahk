@@ -94,7 +94,9 @@ export class PointerType extends Type {
      */
     pointee := IsType
 
-    ToSpecifier() => this.pointee.ToSpecifier() ".Ptr"
+    ToSpecifier() => this.pointee is PointerType 
+        ? "IntPtr.Ptr"  ; Can't do double-indirection like this, pointer must be opaque
+        : this.pointee.ToSpecifier() ".Ptr"
 }
 
 /**

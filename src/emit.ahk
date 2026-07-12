@@ -1,8 +1,8 @@
 #Requires AutoHotkey v2.1-alpha.30
 
 #Import "Utils\StringBuilder" { StringBuilder }
-#Import "IR\Enum" { Enum }
-#Import "Emitters" { EmitEnum }
+#Import "IR" as IR
+#Import "Emitters" { EmitEnum, EmitStruct, EmitUnion, EmitFunction }
 
 _Banner := Format("
 (
@@ -20,7 +20,7 @@ _Banner := Format("
  * @param {Array<String, Type>} registry type registry 
  * @returns {Map<String, StringBuilder>} a map of header file names to emitted code 
  */
-export default Emit(registry) {
+export default Emit(registry, dll) {
     global _Banner
     output := Map()
 
@@ -37,14 +37,21 @@ export default Emit(registry) {
 
         for t in types {
             switch true {
-                case t is Enum: EmitEnum(t, sb)
+                case t is IR.Enum.Enum:
+                    EmitEnum(t, sb)
+                case t is IR.Struct.Struct:
+                    EmitStruct(t, registry, sb)
+                case t is IR.Struct.Union:
+                    EmitUnion(t, registry, sb)
+                case t is IR.Function.Function:
+                    EmitFunction(t, dll, registry, sb)
                 default:
                     continue    ; Don't append a blank line for types we skip
             }
             sb.AppendLine()
         }
 
-    output[filename] := sb
+        output[filename] := sb
     }
 
     return output
