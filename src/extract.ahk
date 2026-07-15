@@ -414,10 +414,18 @@ FindIncludeAncestor(path) {
     #DllLoad api-ms-win-core-path-l1-1-0.dll
 
     static S_OK := 0
-    while PathCchRemoveFileSpec(StrPtr(path), StrLen(path)) == S_OK {
+    loop {
+        prevLen := StrLen(path)
+        if PathCchRemoveFileSpec(StrPtr(path), StrLen(path) + 1) != S_OK
+            break
         VarSetStrCapacity(&path, -1)
+
         if path.EndsWith("include")
             return path
+
+        ; Root paths (e.g. "C:\") are returned unaltered with S_OK; we must break manually
+        if StrLen(path) == prevLen
+            break
     }
 
     return ""
