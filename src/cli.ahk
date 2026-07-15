@@ -36,7 +36,7 @@ export ParseArgs(args) {
     paths := []
     dll := ""
     includes := []
-    output := A_ScriptFullPath
+    output := A_WorkingDir
 
     while(i < args.Length) {
         switch arg := args[++i] {
