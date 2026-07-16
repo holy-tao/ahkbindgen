@@ -276,6 +276,7 @@ ExtractType(type) {
             canonical:  type.Canonical.Spelling,
             size:       type.SizeOf,
             alignment:  type.AlignOf,
+            usr:        decl.USR,
             name:       decl.Spelling,
             underlying: ExtractType(decl.UnderlyingType),
             isSystem:   type.Declaration.Location.IsInSystemHeader

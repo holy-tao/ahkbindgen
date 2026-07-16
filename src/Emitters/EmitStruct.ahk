@@ -12,7 +12,7 @@
  * @returns {void} 
  */
 export EmitStruct(structType, registry, sb) {
-    sb.AppendLine("struct " structType.name " {")
+    sb.AppendLine("export struct " structType.name " {")
 
     for field in structType.fields {
         line := Format("    {1}: {2}", field.name, field.type.ToSpecifier())
@@ -31,7 +31,7 @@ export EmitStruct(structType, registry, sb) {
  * @returns {void} 
  */
 export EmitUnion(unionType, registry, sb) {
-    sb.AppendLine("struct " unionType.name " {")
+    sb.AppendLine("export struct " unionType.name " {")
 
     ; Generate DefineProp calls in __New; we can't do this declaratively    
     sb.AppendLine("    static __New() {")

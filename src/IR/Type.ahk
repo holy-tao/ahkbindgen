@@ -171,6 +171,12 @@ export class NamedType extends Type {
  */
 export class TypedefType extends Type {
     /**
+     * The declaration's Unified Symbol Resolution, stable and non-empty even for anonymous records.
+     * @type {String}
+     */
+    usr := String
+
+    /**
      * The typedef's name, e.g. "DWORD", "LPRECT".
      * @type {String}
      */

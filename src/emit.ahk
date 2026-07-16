@@ -33,6 +33,9 @@ export default Emit(registry, dll) {
 
         sb := StringBuilder(512)
         sb.AppendLine("#Requires AutoHotkey v2.1-alpha.30").AppendLine()
+
+        EmitImports(types, filename, registry, sb)
+
         sb.AppendRef(&_Banner).AppendRepeat(sb.NewLine, 2)
 
         for t in types {
@@ -57,4 +60,96 @@ export default Emit(registry, dll) {
     }
 
     return output
+}
+
+/**
+ * Collect the declarations referenced by `types` that live in *other* output files and emit a granular
+ * `#Import "<file>" { Name, ... }` line for each such file into `sb`. Only types actually used are imported;
+ * self-references and references that don't resolve to a registered declaration are skipped.
+ *
+ * @param {Array<Emittable>} types the declarations being emitted into the current file
+ * @param {String} filename the current output file's basename (without extension)
+ * @param {Map<String, Emittable>} registry the type registry, keyed by USR
+ * @param {StringBuilder} sb StringBuilder to emit the imports into
+ * @returns {void}
+ */
+EmitImports(types, filename, registry, sb) {
+    refs := Map()   ; used as a set of referenced USRs
+    for t in types {
+        CollectRefs(t, refs, registry)
+    }
+
+    imports := Map()    ; targetFile (basename) -> Map used as a set of exported names
+    imports.CaseSense := false
+    for usr in refs {
+        if !registry.Has(usr)
+            continue    ; reference to a type from a header we didn't parse; nothing to import
+
+        target := registry[usr]
+        SplitPath(target.sourceFile, , , , &targetFile)
+        if targetFile = filename
+            continue    ; same file - no import needed
+
+        imports.GetOrAdd(targetFile, Map())[target.name] := true
+    }
+
+    if !imports.Count
+        return
+
+    for targetFile in imports.Keys().Sorted((a, b) => StrCompare(a, b)) {
+        names := imports[targetFile].Keys().Sorted((a, b) => StrCompare(a, b))
+        sb.AppendLine('#Import "' targetFile '" { ' String.Join(", ", names*) ' }')
+    }
+    sb.AppendLine()
+}
+
+/**
+ * Add the USRs of every cross-file-referenceable type used by `decl` into the `refs` set.
+ *
+ * @param {Emittable} decl the declaration to inspect
+ * @param {Map} refs set of referenced USRs to populate
+ * @param {Map<String, Emittable>} registry the type registry, keyed by USR
+ * @returns {void}
+ */
+CollectRefs(decl, refs, registry) {
+    switch true {
+        case decl is IR.Struct.Struct, decl is IR.Struct.Union:
+            for field in decl.fields
+                WalkType(field.type, refs, registry)
+        case decl is IR.Function.Function:
+            WalkType(decl.returnType, refs, registry)
+            for arg in decl.arguments
+                WalkType(arg.type, refs, registry)
+        case decl is IR.Type.EmittableTypedef:
+            WalkType(decl.underlying, refs, registry)
+        ; Enums store as their underlying primitive and reference nothing
+    }
+}
+
+/**
+ * Recursively add the USRs of any named/typedef declaration referenced by `type` (through pointer and array
+ * wrappers) into the `refs` set. Mirrors which references survive into `ToSpecifier()` output.
+ *
+ * @param {Type} type the type to walk
+ * @param {Map} refs set of referenced USRs to populate
+ * @param {Map<String, Emittable>} registry the type registry, keyed by USR
+ * @returns {void}
+ */
+WalkType(type, refs, registry) {
+    switch true {
+        case type is IR.Type.PointerType:
+            WalkType(type.pointee, refs, registry)
+        case type is IR.Type.ArrayType:
+            WalkType(type.elementType, refs, registry)
+        case type is IR.Type.NamedType:
+            refs[type.usr] := true
+        case type is IR.Type.TypedefType:
+            ; A system typedef collapses to its underlying primitive in ToSpecifier, so its alias name never
+            ; appears. A typedef for an anonymous record  (e.g. `typedef struct {...} CXString;`) is skipped
+            ; at extraction. In both these cases, fall back to the underlying record.
+            if !type.isSystem && registry.Has(type.usr)
+                refs[type.usr] := true
+            else
+                WalkType(type.underlying, refs, registry)
+    }
 }

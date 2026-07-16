@@ -9,7 +9,7 @@
  * @returns {void} 
  */
 export default EmitTypedef(typedefType, registry, sb) {
-    sb.AppendLine("struct " typedefType.name " {")
+    sb.AppendLine("export struct " typedefType.name " {")
     sb.AppendLine("    value: " typedefType.underlying.ToSpecifier())
     sb.AppendLine("    __value {")
     ; No getter so that returned typedefs are able to have methods and properties

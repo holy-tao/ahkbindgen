@@ -8,7 +8,7 @@
  */
 export default EmitEnum(enumType, sb) {
     global _ValueCode
-    sb.AppendLine("struct " enumType.name " {")
+    sb.AppendLine("export struct " enumType.name " {")
     sb.AppendLine("    value: " enumType.underlying.ToSpecifier())
     sb.AppendLine("    __value {")
     sb.AppendLine("        get => this.value")
