@@ -1,6 +1,9 @@
 #Requires AutoHotkey v2.1-alpha.30
 
-#Import "../src/extract" { ExtractType, ExtractStruct, ExtractUnion, ExtractEnum }
+#Import "../src/extract" {
+    ExtractType, ExtractStruct, ExtractUnion, ExtractEnum, ExtractFunction, ExtractTypedef,
+    ResolvePreferredNames
+}
 #Import "../src/IR" as IR
 
 #Import "YUnit\Yunit" { Yunit }
@@ -140,6 +143,53 @@ _Int() => IR.PrimitiveType({ alignment: 4, canonical: "int", size: 4, specifier:
 _Short() => IR.PrimitiveType({ alignment: 2, canonical: "short", size: 2, specifier: "Int16", spelling: "short", isSystem: false })
 _Char() => IR.PrimitiveType({ alignment: 1, canonical: "char", size: 1, specifier: "Int8", spelling: "char", isSystem: false })
 _UInt() => IR.PrimitiveType({ alignment: 4, canonical: "unsigned int", size: 4, specifier: "UInt32", spelling: "unsigned int", isSystem: false })
+
+/**
+ * Parse `code`, run the full top-level extraction (mirroring `extract.ahk`'s visitor) plus the
+ * preferred-name resolution pass, and return the populated registry. Used to test cross-declaration
+ * behaviour like tag/typedef renaming that a single-declaration extractor can't exercise.
+ *
+ * @param {String} code C source to parse
+ * @param {String} testName the unit test method - pass A_ThisFunc
+ * @returns {Map<String, Record>} the registry, keyed by USR
+ */
+_ExtractRegistry(code, testName) {
+    tu := _Parse(code, testName)
+    registry := Map()
+    preferred := Map()
+
+    for cursor in tu.Cursor.Children() {
+        if !cursor.Location.IsFromMainFile
+            continue
+        switch cursor.kind {
+            case CursorKind.StructDecl:   ExtractStruct(registry, cursor)
+            case CursorKind.UnionDecl:    ExtractUnion(registry, cursor)
+            case CursorKind.EnumDecl:     ExtractEnum(registry, cursor)
+            case CursorKind.TypedefDecl:  ExtractTypedef(registry, preferred, cursor)
+            case CursorKind.FunctionDecl: ExtractFunction(registry, cursor)
+        }
+    }
+
+    ResolvePreferredNames(registry, preferred)
+    return registry
+}
+
+/** Names of every struct/union declaration in `registry`. */
+_RecordNames(registry) {
+    names := []
+    for usr, decl in registry
+        if decl is IR.Struct.Struct || decl is IR.Struct.Union
+            names.Push(decl.name)
+    return names
+}
+
+/** The struct/union declaration named `name`, or "" if none. */
+_FindRecord(registry, name) {
+    for usr, decl in registry
+        if (decl is IR.Struct.Struct || decl is IR.Struct.Union) && decl.name == name
+            return decl
+    return ""
+}
 
 class ExtractTests {
     class Types {
@@ -478,6 +528,52 @@ class ExtractTests {
             })
 
             _AssertEnumExtraction(A_ThisFunc, code, expected)
+        }
+    }
+
+    class PreferredNames {
+        ; `typedef struct tagRECT { ... } RECT;` - the tag is throwaway; every reference (by value, by tag,
+        ; through a pointer) should resolve to the typedef name, matching the renamed declaration.
+        TypedefDefinedTag_PrefersTypedefName() {
+            code := "
+            (
+                typedef struct tagRECT { long left; long top; } RECT;
+                struct Line {
+                    RECT byValue;
+                    struct tagRECT byTag;
+                    RECT* byPointer;
+                };
+            )"
+
+            registry := _ExtractRegistry(code, A_ThisFunc)
+            names := _RecordNames(registry)
+
+            YUnit.Assert(names.Any(n => n == "RECT"), "record should be renamed to the typedef name RECT")
+            YUnit.Assert(!names.Any(n => n == "tagRECT"), "throwaway tag tagRECT should not survive")
+
+            line := _FindRecord(registry, "Line")
+            YUnit.Assert(line.fields[1].type.ToSpecifier() == "RECT",
+                "by-value reference should resolve to RECT, got " line.fields[1].type.ToSpecifier())
+            YUnit.Assert(line.fields[2].type.ToSpecifier() == "RECT",
+                "by-tag reference should resolve to RECT, got " line.fields[2].type.ToSpecifier())
+            YUnit.Assert(line.fields[3].type.ToSpecifier() == "RECT.Ptr",
+                "pointer reference should resolve to RECT.Ptr, got " line.fields[3].type.ToSpecifier())
+        }
+
+        ; `typedef struct Foo Bar;` merely aliases a separately-defined struct - Foo must keep its own name and
+        ; must not be renamed to Bar.
+        TypedefAliasOfSeparateRecord_KeepsOriginalName() {
+            code := "
+            (
+                struct Foo { int a; };
+                typedef struct Foo Bar;
+            )"
+
+            registry := _ExtractRegistry(code, A_ThisFunc)
+            names := _RecordNames(registry)
+
+            YUnit.Assert(names.Any(n => n == "Foo"), "separately-defined Foo should keep its name")
+            YUnit.Assert(!names.Any(n => n == "Bar"), "alias Bar should not rename or duplicate Foo")
         }
     }
 }

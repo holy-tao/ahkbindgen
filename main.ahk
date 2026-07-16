@@ -10,7 +10,7 @@
 
 #Import "src\cli.ahk" { ParseArgs }
 #Import "src\clang" { LoadLibClang, FindClang, GetDefaultIncludePaths }
-#Import "src\extract.ahk" { Extract }
+#Import "src\extract.ahk" { Extract, ResolvePreferredNames }
 #Import "src\emit.ahk" { Emit }
 
 ; 1. Parse args and find libclang
@@ -26,6 +26,7 @@ Log.Debug("User include path(s): " String(config.includes))
 
 worklist := config.paths.clone()
 registry := Map()
+preferredNames := Map()
 
 ; 2. Extract types
 while worklist.Length > 0 {
@@ -38,8 +39,11 @@ while worklist.Length > 0 {
         continue
     }
 
-    Extract(path, registry, systemIncludePaths, config.includes)
+    Extract(path, registry, preferredNames, systemIncludePaths, config.includes)
 }
+
+; Prefer typedef names over throwaway tags (tagRECT -> RECT), now that every header is parsed
+ResolvePreferredNames(registry, preferredNames)
 
 ;3. Render types into strings in memory
 emitted := Emit(registry, config.dll)

@@ -27,11 +27,13 @@
  * 
  * @param {String} filepath path to the header file. Assumed to exist
  * @param {Map<String, Type>} registry type registry to extract types into
+ * @param {Map<String, String>} preferredNames record/enum USR -> preferred display name, populated as
+ *        typedefs that *define* a record/enum are encountered (see {@link ResolvePreferredNames})
  * @param {Array<String>} systemIncludePaths compiler/SDK include paths, treated as system headers
  * @param {Array<String>} userIncludePaths user-supplied (`-I`) include paths, treated as user headers
  * @returns {Map<String, Record>} map of USR -> extracted declarations
  */
-export Extract(filepath, registry, systemIncludePaths, userIncludePaths) {
+export Extract(filepath, registry, preferredNames, systemIncludePaths, userIncludePaths) {
     Log.Info("Parsing header " filepath)
 
     idx := CXIndex.Create()
@@ -60,17 +62,18 @@ export Extract(filepath, registry, systemIncludePaths, userIncludePaths) {
     ProcessDiagnostics(tu)
 
     ; Keyed by USR so that `NamedType` references (and anonymous records) resolve unambiguously in a later pass.
-    tu.cursor.Visit(Visit.Bind(registry))
+    tu.cursor.Visit(Visit.Bind(registry, preferredNames))
 }
 
 /**
  * Visitor for the tree walk - collects types we care about into the types map
  * @param {Map<String, Record>} registry USR -> extracted declaration
+ * @param {Map<String, String>} preferredNames record/enum USR -> preferred display name
  * @param {CXCursor} cursor
  * @param {CXCursor} parent
  * @returns {CXChildVisitResult}
  */
-Visit(registry, cursor, parent) {
+Visit(registry, preferredNames, cursor, parent) {
     if !cursor.location.IsFromMainFile || registry.Has(cursor.USR)
         return CXChildVisitResult.Continue
     
@@ -85,7 +88,7 @@ Visit(registry, cursor, parent) {
             case CursorKind.EnumDecl:
                 ExtractEnum(registry, cursor)
             case CursorKind.TypedefDecl:
-                ExtractTypedef(registry, cursor)
+                ExtractTypedef(registry, preferredNames, cursor)
             default:
                 Log.Trace(Format("Unhanlded cursor kind '{1}' ({2}): {3} ",
                     cursor.KindSpelling, cursor.kind, cursor.DisplayName))
@@ -110,14 +113,19 @@ Visit(registry, cursor, parent) {
  * @param {CXCursor} cursor Cursor, type assumed to be TypedefDecl
  * @returns {void} 
  */
-ExtractTypedef(registry, cursor) {
+ExtractTypedef(registry, preferredNames, cursor) {
     canon := cursor.UnderlyingType.Canonical
 
-    ; If the canonical type is a record or enum, we can be confident we're looking at
-    ; the actual typedef for it (e.g. the `typdef struct Foo { ... }` line; skip it, we
-    ; extract the underlying declaration already.
-    if canon.kind == CXTypeKind.Record || canon.kind == CXTypeKind.Enum
+    ; A typedef whose canonical type is a record or enum is that declaration's public name - we don't emit a
+    ; separate wrapper (the record/enum is extracted on its own). When the record/enum is *defined by* this
+    ; typedef (e.g. `typedef struct tagRECT { ... } RECT;`) the tag ("tagRECT") is throwaway and callers use
+    ; the typedef name ("RECT"), so we record it as the preferred name.
+    if canon.kind == CXTypeKind.Record || canon.kind == CXTypeKind.Enum {
+        decl := canon.Declaration
+        if IsDefinedByTypedef(cursor, decl) && !preferredNames.Has(decl.USR)
+            preferredNames[decl.USR] := cursor.Spelling
         return
+    }
 
     extracted := EmittableTypedef({
         usr: cursor.USR,
@@ -128,6 +136,91 @@ ExtractTypedef(registry, cursor) {
 
     Log.Debug("Extracted " String(extracted))
     registry[extracted.usr] := extracted
+}
+
+/**
+ * Whether `recordDecl` is defined *inside* the given typedef declaration - i.e. the typedef introduces the
+ * record/enum, as in `typedef struct tagRECT { ... } RECT;`, rather than aliasing one declared elsewhere. Decided
+ * by checking whether the record's declaration location falls within the typedef's source extent.
+ *
+ * @param {CXCursor} typedefCursor a TypedefDecl cursor
+ * @param {CXCursor} recordDecl the struct/union/enum declaration the typedef canonicalizes to
+ * @returns {Integer} 1 if the record is defined by the typedef, else 0
+ */
+IsDefinedByTypedef(typedefCursor, recordDecl) {
+    extent := typedefCursor.Extent
+    start := extent.Start.FileLocation()
+    end := extent.End.FileLocation()
+    rec := recordDecl.Location.FileLocation()
+
+    ; `offset` is a character offset within its file; compare file identity too so offsets from different files
+    ; in the same translation unit can't spuriously overlap.
+    return rec.file.ptr == start.file.ptr && rec.offset >= start.offset && rec.offset < end.offset
+}
+
+/**
+ * Second pass over the registry: rename each record/enum that a typedef defined under a nicer name to that name,
+ * and rewrite every `NamedType` reference to it so declarations and their uses stay consistent. Extraction runs
+ * this once, after all headers are parsed, so it is order-independent (a reference can be extracted before the
+ * typedef that renames its target). See {@link IsDefinedByTypedef}.
+ *
+ * @param {Map<String, Record>} registry the type registry, keyed by USR
+ * @param {Map<String, String>} preferredNames record/enum USR -> preferred display name
+ * @returns {void}
+ */
+export ResolvePreferredNames(registry, preferredNames) {
+    if !preferredNames.Count
+        return
+
+    for usr, decl in registry {
+        if (decl is Struct || decl is Union || decl is Enum) && preferredNames.Has(decl.usr)
+            decl.name := preferredNames[decl.usr]
+
+        for type in _DeclTypes(decl)
+            _RenameTypeRefs(type, preferredNames)
+    }
+}
+
+/**
+ * The constituent `Type`s of a declaration - the places a `NamedType` reference can appear.
+ * @param {Record} decl a top-level declaration
+ * @returns {Array<Type>}
+ */
+_DeclTypes(decl) {
+    types := []
+    switch true {
+        case decl is Struct, decl is Union:
+            for field in decl.fields
+                types.Push(field.type)
+        case decl is Function:
+            types.Push(decl.returnType)
+            for arg in decl.arguments
+                types.Push(arg.type)
+        case decl is EmittableTypedef:
+            types.Push(decl.underlying)
+    }
+    return types
+}
+
+/**
+ * Rewrite any `NamedType` reference within `type` (through pointer/array/typedef wrappers) whose USR has a
+ * preferred name, so uses match the renamed declaration.
+ * @param {Type} type the type to rewrite in place
+ * @param {Map<String, String>} preferredNames record/enum USR -> preferred display name
+ * @returns {void}
+ */
+_RenameTypeRefs(type, preferredNames) {
+    switch true {
+        case type is PointerType:
+            _RenameTypeRefs(type.pointee, preferredNames)
+        case type is ArrayType:
+            _RenameTypeRefs(type.elementType, preferredNames)
+        case type is TypedefType:
+            _RenameTypeRefs(type.underlying, preferredNames)
+        case type is NamedType:
+            if preferredNames.Has(type.usr)
+                type.name := preferredNames[type.usr]
+    }
 }
 
 /**
