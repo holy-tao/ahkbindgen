@@ -17,6 +17,15 @@ export IsType(v) {
 }
 
 /**
+ * Record transform that coerces any value to the literal integer 1 or 0
+ * @param {Any} v value to coerce 
+ * @returns {Integer} 1 or 0 
+ */
+export Boolean(v) {
+    return !!v
+}
+
+/**
  * A top-level typedef that will be emitted during codegen.
  */
 export class EmittableTypedef extends Emittable {
@@ -55,6 +64,12 @@ export class Type extends Record {
      * @type {Integer}
      */
     alignment := Integer
+
+    /**
+     * Whether this type comes from a system header or not.
+     * @type {Integer}
+     */
+    isSystem := Boolean
 
     /**
      * The AHK v2.1 type specifier that represents this type in a struct definition, e.g. "Int32", "RECT.Ptr",
@@ -167,5 +182,7 @@ export class TypedefType extends Type {
      */
     underlying := IsType
 
-    ToSpecifier() => this.name
+    ; System-header typedefs (time_t, size_t, ...) resolve to their underlying primitive; typedefs from the
+    ; library being generated keep their alias name so users can hang methods off them.
+    ToSpecifier() => this.isSystem ? this.underlying.ToSpecifier() : this.name
 }

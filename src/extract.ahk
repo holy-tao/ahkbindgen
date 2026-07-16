@@ -25,23 +25,32 @@
 /**
  * Extract types and functions from the header file at `filepath` into the IR
  * 
- * @param {String} filepath path to the header file. Assumed to exist 
+ * @param {String} filepath path to the header file. Assumed to exist
  * @param {Map<String, Type>} registry type registry to extract types into
- * @param {Array<String>} includePaths include paths to use
- * @returns {Map<String, Record>} map of USR -> extracted declarations 
+ * @param {Array<String>} systemIncludePaths compiler/SDK include paths, treated as system headers
+ * @param {Array<String>} userIncludePaths user-supplied (`-I`) include paths, treated as user headers
+ * @returns {Map<String, Record>} map of USR -> extracted declarations
  */
-export Extract(filepath, registry, includePaths) {
+export Extract(filepath, registry, systemIncludePaths, userIncludePaths) {
     Log.Info("Parsing header " filepath)
 
     idx := CXIndex.Create()
 
     clangArgs := ["-std=c11"]
-    for path in includePaths {
+    ; Compiler/SDK paths come in as *system* dirs (-isystem, not -I) so headers found under them are flagged as
+    ; system headers.
+    for path in systemIncludePaths {
+        clangArgs.Push("-isystem", path)
+    }
+
+    ; User-supplied includes stay plain -I (non-system), so their alias types keep their names, same as the
+    ; library's own headers reached via `parentInclude` below.
+    for path in userIncludePaths {
         clangArgs.Push("-I", path)
     }
 
     ; If the given path is in an include directory, automatically include it
-    if (parentInclude := FindIncludeAncestor(filepath)) {
+    if parentInclude := FindIncludeAncestor(filepath) {
         clangArgs.Push("-I", parentInclude)
     }
 
@@ -268,7 +277,8 @@ ExtractType(type) {
             size:       type.SizeOf,
             alignment:  type.AlignOf,
             name:       decl.Spelling,
-            underlying: ExtractType(decl.UnderlyingType)
+            underlying: ExtractType(decl.UnderlyingType),
+            isSystem:   type.Declaration.Location.IsInSystemHeader
         })
     }
 
@@ -277,7 +287,8 @@ ExtractType(type) {
         spelling:  type.Spelling,
         canonical: c.Spelling,
         size:      c.SizeOf,
-        alignment: c.AlignOf
+        alignment: c.AlignOf,
+        isSystem:  type.Declaration.Location.IsInSystemHeader
     }
 
     switch c.kind {

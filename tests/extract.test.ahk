@@ -136,10 +136,10 @@ _AssertUnionExtraction(testName, code, expected, structName?) {
 
 ; Builders for the primitive IR types that recur across struct field assertions. Kept as functions (rather
 ; than shared instances) so each assertion gets a fresh value and nothing can mutate a shared expectation.
-_Int() => IR.PrimitiveType({ alignment: 4, canonical: "int", size: 4, specifier: "Int32", spelling: "int" })
-_Short() => IR.PrimitiveType({ alignment: 2, canonical: "short", size: 2, specifier: "Int16", spelling: "short" })
-_Char() => IR.PrimitiveType({ alignment: 1, canonical: "char", size: 1, specifier: "Int8", spelling: "char" })
-_UInt() => IR.PrimitiveType({ alignment: 4, canonical: "unsigned int", size: 4, specifier: "UInt32", spelling: "unsigned int" })
+_Int() => IR.PrimitiveType({ alignment: 4, canonical: "int", size: 4, specifier: "Int32", spelling: "int", isSystem: false })
+_Short() => IR.PrimitiveType({ alignment: 2, canonical: "short", size: 2, specifier: "Int16", spelling: "short", isSystem: false })
+_Char() => IR.PrimitiveType({ alignment: 1, canonical: "char", size: 1, specifier: "Int8", spelling: "char", isSystem: false })
+_UInt() => IR.PrimitiveType({ alignment: 4, canonical: "unsigned int", size: 4, specifier: "UInt32", spelling: "unsigned int", isSystem: false })
 
 class ExtractTests {
     class Types {
@@ -151,7 +151,8 @@ class ExtractTests {
                 canonical: "long",
                 size: 4,
                 specifier: "Int32",
-                spelling: "long"
+                spelling: "long",
+                isSystem: false
             }))
 
         UnsignedScalars_AreExtractedCorrectly() => _AssertTypedefExtraction(
@@ -162,7 +163,8 @@ class ExtractTests {
                 canonical: "unsigned long",
                 size: 4,
                 specifier: "UInt32",
-                spelling: "unsigned long"
+                spelling: "unsigned long",
+                isSystem: false
             }))
 
         UnrepresentableTypes_AreExtractedAsOpaqueBlobs() => _AssertTypedefExtraction(
@@ -172,7 +174,8 @@ class ExtractTests {
                 alignment: 16,
                 canonical: "__int128",
                 size: 16,
-                spelling: "__int128"
+                spelling: "__int128",
+                isSystem: false
             })
         )
 
@@ -184,7 +187,8 @@ class ExtractTests {
                 canonical: "char *",
                 size: 8,
                 alignment: 8,
-                pointee: _Char()
+                pointee: _Char(),
+                isSystem: false
             })
         )
     }
@@ -263,7 +267,8 @@ class ExtractTests {
                             canonical: "char *",
                             size: 8,
                             alignment: 8,
-                            pointee: _Char()
+                            pointee: _Char(),
+                            isSystem: false
                         })
                     }),
                 ]
@@ -294,12 +299,14 @@ class ExtractTests {
                             size: 12,
                             alignment: 4,
                             length: 3,
+                            isSystem: false,
                             elementType: IR.PrimitiveType({
                                 alignment: 4,
                                 canonical: "float",
                                 size: 4,
                                 specifier: "Float32",
-                                spelling: "float"
+                                spelling: "float",
+                                isSystem: false
                             })
                         })
                     }),
@@ -336,7 +343,8 @@ class ExtractTests {
                             size: 4,
                             alignment: 4,
                             usr: "c:@S@Inner",
-                            name: "Inner"
+                            name: "Inner",
+                            isSystem: false
                         })
                     }),
                 ]
@@ -418,7 +426,8 @@ class ExtractTests {
                             canonical: "long long",
                             size: 8,
                             specifier: "Int64",
-                            spelling: "long long"
+                            spelling: "long long",
+                            isSystem: false
                         })
                     }),
                     IR.Struct.StructField({
@@ -429,7 +438,8 @@ class ExtractTests {
                             canonical: "double",
                             size: 8,
                             specifier: "Float64",
-                            spelling: "double"
+                            spelling: "double",
+                            isSystem: false
                         })
                     })
                 ]
@@ -458,7 +468,8 @@ class ExtractTests {
                     canonical: "int",
                     size: 4,
                     specifier: "Int32",
-                    spelling: "int"
+                    spelling: "int",
+                    isSystem: false
                 }),
                 fields: [
                     IR.Enum.EnumField({ name: "Pass", value: 0 }),

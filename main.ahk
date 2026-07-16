@@ -18,11 +18,11 @@ config := ParseArgs(A_Args)
 
 LoadLibClang()
 clangPath := FindClang()
-includePaths := GetDefaultIncludePaths(clangPath)
-includePaths.Push(config.includes*)
+systemIncludePaths := GetDefaultIncludePaths(clangPath)
 
 Log.Info(DllCall("libclang\clang_getClangVersion", CXString).ToString())
-Log.Debug("Include path(s): " String(includePaths))
+Log.Debug("System include path(s): " String(systemIncludePaths))
+Log.Debug("User include path(s): " String(config.includes))
 
 worklist := config.paths.clone()
 registry := Map()
@@ -38,7 +38,7 @@ while worklist.Length > 0 {
         continue
     }
 
-    Extract(path, registry, includePaths)
+    Extract(path, registry, systemIncludePaths, config.includes)
 }
 
 ;3. Render types into strings in memory
