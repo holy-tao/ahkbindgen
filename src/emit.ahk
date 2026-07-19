@@ -2,6 +2,7 @@
 
 #Import "Utils\StringBuilder" { StringBuilder }
 #Import "IR" as IR
+#Import "IR\Walk" { WalkTypeRefs, DeclTypes}
 #Import "Emitters" { EmitEnum, EmitStruct, EmitUnion, EmitFunction, EmitTypedef }
 
 _Banner := Format("
@@ -104,7 +105,8 @@ EmitImports(types, filename, registry, sb) {
 }
 
 /**
- * Add the USRs of every cross-file-referenceable type used by `decl` into the `refs` set.
+ * Add the USRs of every cross-file-referenceable type used by `decl` into the `refs` set. Mirrors which
+ * references survive into `ToSpecifier()` output.
  *
  * @param {Emittable} decl the declaration to inspect
  * @param {Map} refs set of referenced USRs to populate
@@ -112,44 +114,11 @@ EmitImports(types, filename, registry, sb) {
  * @returns {void}
  */
 CollectRefs(decl, refs, registry) {
-    switch true {
-        case decl is IR.Struct.Struct, decl is IR.Struct.Union:
-            for field in decl.fields
-                WalkType(field.type, refs, registry)
-        case decl is IR.Function.Function:
-            WalkType(decl.returnType, refs, registry)
-            for arg in decl.arguments
-                WalkType(arg.type, refs, registry)
-        case decl is IR.Type.EmittableTypedef:
-            WalkType(decl.underlying, refs, registry)
-        ; Enums store as their underlying primitive and reference nothing
-    }
-}
-
-/**
- * Recursively add the USRs of any named/typedef declaration referenced by `type` (through pointer and array
- * wrappers) into the `refs` set. Mirrors which references survive into `ToSpecifier()` output.
- *
- * @param {Type} type the type to walk
- * @param {Map} refs set of referenced USRs to populate
- * @param {Map<String, Emittable>} registry the type registry, keyed by USR
- * @returns {void}
- */
-WalkType(type, refs, registry) {
-    switch true {
-        case type is IR.Type.PointerType:
-            WalkType(type.pointee, refs, registry)
-        case type is IR.Type.ArrayType:
-            WalkType(type.elementType, refs, registry)
-        case type is IR.Type.NamedType:
-            refs[type.usr] := true
-        case type is IR.Type.TypedefType:
-            ; A system typedef collapses to its underlying primitive in ToSpecifier, so its alias name never
-            ; appears. A typedef for an anonymous record  (e.g. `typedef struct {...} CXString;`) is skipped
-            ; at extraction. In both these cases, fall back to the underlying record.
-            if !type.isSystem && registry.Has(type.usr)
-                refs[type.usr] := true
-            else
-                WalkType(type.underlying, refs, registry)
+    for refType in DeclTypes(decl) {
+        WalkTypeRefs(refType,
+            (named) => refs[named.usr] := true,
+            ; Only include resolveable library typedefs. System typedefs are collapsed to their underlying
+            ; primitives, and anonymous typedefs aren't emitted, so in that case fall back to the underlying record
+            (td, recurse) => (!td.isSystem && registry.Has(td.usr)) ? (refs[td.usr] := true) : recurse())
     }
 }

@@ -8,3 +8,4 @@
 #Import export Enum {*}
 #Import export Type {*}
 #Import export Function {*}
+#Import export Walk {*}

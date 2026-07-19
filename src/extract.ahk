@@ -3,6 +3,7 @@
 #Import "IR\Struct" { Struct, Union, StructField }
 #Import "IR\Function" { Function, Argument }
 #Import "IR\Enum" { Enum, EnumField }
+#Import "IR\Walk" { DeclTypes, WalkTypeRefs }
 #Import "IR\Type" {
     EmittableTypedef,
     PrimitiveType,
@@ -176,50 +177,12 @@ export ResolvePreferredNames(registry, preferredNames) {
         if (decl is Struct || decl is Union || decl is Enum) && preferredNames.Has(decl.usr)
             decl.name := preferredNames[decl.usr]
 
-        for type in _DeclTypes(decl)
-            _RenameTypeRefs(type, preferredNames)
-    }
-}
-
-/**
- * The constituent `Type`s of a declaration - the places a `NamedType` reference can appear.
- * @param {Record} decl a top-level declaration
- * @returns {Array<Type>}
- */
-_DeclTypes(decl) {
-    types := []
-    switch true {
-        case decl is Struct, decl is Union:
-            for field in decl.fields
-                types.Push(field.type)
-        case decl is Function:
-            types.Push(decl.returnType)
-            for arg in decl.arguments
-                types.Push(arg.type)
-        case decl is EmittableTypedef:
-            types.Push(decl.underlying)
-    }
-    return types
-}
-
-/**
- * Rewrite any `NamedType` reference within `type` (through pointer/array/typedef wrappers) whose USR has a
- * preferred name, so uses match the renamed declaration.
- * @param {Type} type the type to rewrite in place
- * @param {Map<String, String>} preferredNames record/enum USR -> preferred display name
- * @returns {void}
- */
-_RenameTypeRefs(type, preferredNames) {
-    switch true {
-        case type is PointerType:
-            _RenameTypeRefs(type.pointee, preferredNames)
-        case type is ArrayType:
-            _RenameTypeRefs(type.elementType, preferredNames)
-        case type is TypedefType:
-            _RenameTypeRefs(type.underlying, preferredNames)
-        case type is NamedType:
-            if preferredNames.Has(type.usr)
-                type.name := preferredNames[type.usr]
+        ; Rewrite every NamedType reference to a renamed record so uses match the renamed declaration. Aliases
+        ; are always transparent here, so descend through them.
+        for refType in DeclTypes(decl)
+            WalkTypeRefs(refType,
+                (named) => preferredNames.Has(named.usr) && (named.name := preferredNames[named.usr]),
+                (_, recurse) => recurse())
     }
 }
 
