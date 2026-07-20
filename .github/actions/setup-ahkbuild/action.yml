@@ -1,0 +1,44 @@
+name: Setup ahkbuild
+description: Check out the ahkbuild CLI, install it, and restore project dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve ahkbuild HEAD
+      id: rev
+      shell: pwsh
+      run: |
+        $sha = (git ls-remote https://github.com/holy-tao/ahkbuild.git refs/heads/main) -split '\s+' | Select-Object -First 1
+        if (-not $sha) { throw "Could not resolve ahkbuild main HEAD" }
+        "sha=$sha" >> $env:GITHUB_OUTPUT
+
+    - name: Cache ahkbuild CLI
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cargo/bin/ahkbuild.exe
+        key: ahkbuild-cli-${{ runner.os }}-${{ steps.rev.outputs.sha }}
+
+    - name: Checkout Ahkbuild
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/checkout@v7
+      with:
+        repository: holy-tao/ahkbuild
+        ref: ${{ steps.rev.outputs.sha }}
+        path: ahkbuild
+
+    - name: Install ahkbuild CLI
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: cargo install --path crates/cli
+      working-directory: ahkbuild
+
+    - name: Restore dependencies
+      shell: pwsh
+      run: |
+        git config --global url."https://github.com/".insteadOf "git@github.com:"
+        if ($env:RUNNER_DEBUG -eq '1') {
+            ahkbuild package restore -vvv --locked
+        } else {
+            ahkbuild package restore --locked
+        }

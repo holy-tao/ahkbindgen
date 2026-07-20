@@ -20,24 +20,9 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Checkout Ahkbuild
-        uses: actions/checkout@v7
-        with:
-          repository: holy-tao/ahkbuild
-          path: ahkbuild
+      - name: Setup ahkbuild
+        uses: ./.github/actions/setup-ahkbuild
 
-      - run: cargo install --path crates/cli
-        working-directory: ahkbuild
-
-      - name: Restore dependencies
-        shell: pwsh
-        run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          if ($env:RUNNER_DEBUG -eq '1') {
-              ahkbuild package restore -vvv --locked
-          } else {
-              ahkbuild package restore --locked
-          }
       - run: ahkbuild run -v tests/RunTests.ahk
 
       - name: Publish Test Results

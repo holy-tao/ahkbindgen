@@ -27,3 +27,11 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
+
+  build:
+    needs: [label]
+    if: contains(needs.label.outputs.all-labels, 'ahk')
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    permissions:
+      contents: read

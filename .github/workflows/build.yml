@@ -1,0 +1,42 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      artifact-name:
+        description: Name of the uploaded executable artifact
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+jobs:
+  build:
+    name: Build Executable
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.meta.outputs.artifact-name }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup ahkbuild
+        uses: ./.github/actions/setup-ahkbuild
+
+      - name: Bundle executable
+        shell: pwsh
+        run: ahkbuild bundle exe -v -o dist/ahkbindgen.exe
+
+      - name: Set artifact name
+        id: meta
+        shell: pwsh
+        run: |
+          "artifact-name=ahkbindgen-exe" >> $env:GITHUB_OUTPUT
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact-name }}
+          path: dist/ahkbindgen.exe
+          if-no-files-found: error
